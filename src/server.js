@@ -61,7 +61,8 @@ const init = async () => {
   const usersService = new UsersService();
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
-  const storageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
+  const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
+  const audioStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/audio'));
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -104,7 +105,7 @@ const init = async () => {
       options: {
         albumsService,
         songsService,
-        storageService,
+        storageService: coverStorageService,
         albumsValidator: AlbumsValidator,
         uploadsValidator: UploadsValidator,
       },
@@ -112,8 +113,10 @@ const init = async () => {
     {
       plugin: songs,
       options: {
-        service: songsService,
-        validator: SongsValidator,
+        songsService,
+        storageService: audioStorageService,
+        songsValidator: SongsValidator,
+        uploadsValidator: UploadsValidator,
       },
     },
     {

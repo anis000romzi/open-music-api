@@ -1,3 +1,5 @@
+const path = require('path');
+
 const routes = (handler) => [
   {
     method: 'POST',
@@ -23,6 +25,28 @@ const routes = (handler) => [
     method: 'DELETE',
     path: '/songs/{id}',
     handler: handler.deleteSongByIdHandler,
+  },
+  {
+    method: 'POST',
+    path: '/songs/{id}/audios',
+    handler: handler.postUploadAudioHandler,
+    options: {
+      payload: {
+        allow: 'multipart/form-data',
+        multipart: true,
+        output: 'stream',
+        maxBytes: 5120000,
+      },
+    },
+  },
+  {
+    method: 'GET',
+    path: '/songs/{param*}',
+    handler: {
+      directory: {
+        path: path.resolve(__dirname, 'file'),
+      },
+    },
   },
 ];
 

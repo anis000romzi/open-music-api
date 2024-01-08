@@ -55,6 +55,15 @@ class SongsService {
     return result.rows;
   }
 
+  async addAudioToSong(id, fileLocation) {
+    const query = {
+      text: 'UPDATE songs SET audio = $1 WHERE id = $2',
+      values: [fileLocation, id],
+    };
+
+    await this._pool.query(query);
+  }
+
   async getSongById(id) {
     const query = {
       text: 'SELECT * FROM songs WHERE id = $1',
