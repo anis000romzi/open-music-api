@@ -70,12 +70,14 @@ class UsersService {
     const storedOtp = await this._cacheService.get(`verify:${email}`);
 
     if (storedOtp !== otp) {
-      throw new InvariantError('Gagavl verifikasi user, kode otp tidak sama');
+      throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
     }
 
+    const updatedAt = new Date().toISOString();
+
     const query = {
-      text: 'UPDATE users SET is_active = $1 WHERE email = $2 RETURNING id',
-      values: [true, email],
+      text: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE email = $3 RETURNING id',
+      values: [true, updatedAt, email],
     };
 
     const result = await this._pool.query(query);
@@ -83,7 +85,33 @@ class UsersService {
     if (!result.rows.length) {
       throw new InvariantError('Gagal mengaktifkan user');
     }
+
     await this._cacheService.delete(`verify:${email}`);
+    return result.rows[0].id;
+  }
+
+  async resetUserPassword(email, otp, password) {
+    const storedOtp = await this._cacheService.get(`forgot:${email}`);
+
+    if (storedOtp !== otp) {
+      throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE users SET password = $1, updated_at = $2 WHERE email = $3 RETURNING id',
+      values: [hashedPassword, updatedAt, email],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Gagal mengubah password user');
+    }
+
+    await this._cacheService.delete(`forgot:${email}`);
     return result.rows[0].id;
   }
 

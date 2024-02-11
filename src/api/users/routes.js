@@ -9,6 +9,11 @@ const routes = (handler) => [
     path: '/users/verify',
     handler: handler.verifyUserHandler,
   },
+  {
+    method: 'PUT',
+    path: '/users/resetpassword',
+    handler: handler.resetUserPasswordHandler,
+  },
 ];
 
 module.exports = routes;

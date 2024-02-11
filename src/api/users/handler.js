@@ -43,6 +43,22 @@ class UsersHandler {
     response.code(201);
     return response;
   }
+
+  async resetUserPasswordHandler(request, h) {
+    const { email, otp, password } = request.payload;
+
+    const userId = await this._service.resetUserPassword(email, otp, password);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Password berhasil diubah',
+      data: {
+        userId,
+      },
+    });
+    response.code(201);
+    return response;
+  }
 }
 
 module.exports = UsersHandler;

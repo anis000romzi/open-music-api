@@ -19,6 +19,11 @@ const routes = (handler) => [
     path: '/authentications/verifications',
     handler: handler.postVerificationCodeHandler,
   },
+  {
+    method: 'POST',
+    path: '/authentications/forgotpassword',
+    handler: handler.postResetPasswordRequest,
+  },
 ];
 
 module.exports = routes;

@@ -89,6 +89,25 @@ class AuthenticationsHandler {
     response.code(201);
     return response;
   }
+
+  async postResetPasswordRequest(request, h) {
+    const { email } = request.payload;
+
+    const nanoid = customAlphabet('1234567890', 6);
+    const otp = `${nanoid()}`;
+
+    const { username } = await this._usersService.getUserByEmail(email);
+    await this._cacheService.set(`forgot:${email}`, otp);
+    await this._producerService.sendMessage('auth:forgot', JSON.stringify({ username, email, otp }));
+
+    const response = h.response({
+      status: 'success',
+      message: 'Permintaan Anda sedang kami proses',
+    });
+
+    response.code(201);
+    return response;
+  }
 }
 
 module.exports = AuthenticationsHandler;
