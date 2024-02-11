@@ -58,7 +58,7 @@ const init = async () => {
   const songsService = new SongsService();
   const collaborationsService = new CollaborationsService();
   const playlistsService = new PlaylistsService(collaborationsService);
-  const usersService = new UsersService();
+  const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
   const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
@@ -138,7 +138,9 @@ const init = async () => {
     {
       plugin: authentications,
       options: {
+        cacheService,
         authenticationsService,
+        producerService: ProducerService,
         usersService,
         tokenManager: TokenManager,
         validator: AuthenticationsValidator,

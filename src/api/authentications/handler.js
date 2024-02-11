@@ -1,8 +1,18 @@
 const autoBind = require('auto-bind');
+const { customAlphabet } = require('nanoid');
 
 class AuthenticationsHandler {
-  constructor(authenticationsService, usersService, tokenManager, validator) {
+  constructor(
+    cacheService,
+    authenticationsService,
+    producerService,
+    usersService,
+    tokenManager,
+    validator,
+  ) {
+    this._cacheService = cacheService;
     this._authenticationsService = authenticationsService;
+    this._producerService = producerService;
     this._usersService = usersService;
     this._tokenManager = tokenManager;
     this._validator = validator;
@@ -59,6 +69,25 @@ class AuthenticationsHandler {
       status: 'success',
       message: 'Refresh token berhasil dihapus',
     };
+  }
+
+  async postVerificationCodeHandler(request, h) {
+    const { email } = request.payload;
+
+    const nanoid = customAlphabet('1234567890', 6);
+    const otp = `${nanoid()}`;
+
+    await this._usersService.getUserByEmail(email);
+    await this._cacheService.set(`verify:${email}`, otp);
+    await this._producerService.sendMessage('auth:verify', JSON.stringify({ email, otp }));
+
+    const response = h.response({
+      status: 'success',
+      message: 'Permintaan Anda sedang kami proses',
+    });
+
+    response.code(201);
+    return response;
   }
 }
 

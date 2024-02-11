@@ -14,6 +14,11 @@ const routes = (handler) => [
     path: '/authentications',
     handler: handler.deleteAuthenticationHandler,
   },
+  {
+    method: 'POST',
+    path: '/authentications/verifications',
+    handler: handler.postVerificationCodeHandler,
+  },
 ];
 
 module.exports = routes;
