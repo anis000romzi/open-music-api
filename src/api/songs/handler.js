@@ -12,8 +12,9 @@ class SongsHandler {
 
   async postSongHandler(request, h) {
     this._songsValidator.validateSongPayload(request.payload);
+    const { id: credentialId } = request.auth.credentials;
 
-    const songId = await this._songsService.addSong(request.payload);
+    const songId = await this._songsService.addSong(request.payload, credentialId);
 
     const response = h.response({
       status: 'success',
@@ -27,8 +28,8 @@ class SongsHandler {
   }
 
   async getSongsHandler(request) {
-    const { title, performer } = request.query;
-    const songs = await this._songsService.getSongs(title, performer);
+    const { title, artist } = request.query;
+    const songs = await this._songsService.getSongs(title, artist);
 
     return {
       status: 'success',
@@ -52,7 +53,9 @@ class SongsHandler {
   async putSongByIdHandler(request) {
     this._songsValidator.validateSongPayload(request.payload);
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._songsService.verifySongArtist(id, credentialId);
     await this._songsService.editSongById(id, request.payload);
 
     return {
@@ -63,7 +66,9 @@ class SongsHandler {
 
   async deleteSongByIdHandler(request) {
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._songsService.verifySongArtist(id, credentialId);
     await this._songsService.deleteSongById(id);
 
     return {
@@ -75,9 +80,11 @@ class SongsHandler {
   async postUploadAudioHandler(request, h) {
     const { id } = request.params;
     const { audio } = request.payload;
+    const { id: credentialId } = request.auth.credentials;
     this._uploadsValidator.validateAudioHeaders(audio.hapi.headers);
 
     await this._songsService.getSongById(id);
+    await this._songsService.verifySongArtist(id, credentialId);
     const filename = await this._storageService.writeFile(audio, audio.hapi);
     const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/audio/${filename}`;
     await this._songsService.addAudioToSong(id, fileLocation);

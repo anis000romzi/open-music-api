@@ -27,10 +27,10 @@ exports.up = (pgm) => {
       notNull: true,
     },
     created_at: {
-      type: 'TEXT',
+      type: 'TIMESTAMP',
     },
     updated_at: {
-      type: 'TEXT',
+      type: 'TIMESTAMP',
     },
   });
 };
