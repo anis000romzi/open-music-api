@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
+const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class AlbumsService {
   constructor(cacheService) {
@@ -9,12 +10,15 @@ class AlbumsService {
     this._cacheService = cacheService;
   }
 
-  async addAlbum({ name, year }) {
+  async addAlbum({ name, year }, artist) {
     const id = `album-${nanoid(16)}`;
 
+    const createdAt = new Date().toISOString();
+    const updatedAt = createdAt;
+
     const query = {
-      text: 'INSERT INTO albums VALUES($1, $2, $3) RETURNING id',
-      values: [id, name, year],
+      text: 'INSERT INTO albums VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      values: [id, name, year, artist, null, createdAt, updatedAt],
     };
 
     const result = await this._pool.query(query);
@@ -28,7 +32,10 @@ class AlbumsService {
 
   async getAlbumById(albumId) {
     const query = {
-      text: 'SELECT * FROM albums WHERE id = $1',
+      text: `SELECT albums.id, albums.name, albums.year, users.username, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      WHERE albums.id = $1`,
       values: [albumId],
     };
     const result = await this._pool.query(query);
@@ -41,9 +48,11 @@ class AlbumsService {
   }
 
   async editAlbumById(id, { name, year }) {
+    const updatedAt = new Date().toISOString();
+
     const query = {
-      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
-      values: [name, year, id],
+      text: 'UPDATE albums SET name = $1, year = $2, updated_at = $3 WHERE id = $4 RETURNING id',
+      values: [name, year, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
@@ -51,6 +60,17 @@ class AlbumsService {
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui album. Id tidak ditemukan');
     }
+  }
+
+  async addCoverToAlbum(id, fileLocation) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE albums SET cover = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
   }
 
   async deleteAlbumById(id) {
@@ -66,13 +86,23 @@ class AlbumsService {
     }
   }
 
-  async addCoverToAlbum(id, fileLocation) {
+  async verifyAlbumArtist(id, artist) {
     const query = {
-      text: 'UPDATE albums SET cover = $1 WHERE id = $2',
-      values: [fileLocation, id],
+      text: 'SELECT * FROM albums WHERE id = $1',
+      values: [id],
     };
 
-    await this._pool.query(query);
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Album tidak ditemukan');
+    }
+
+    const album = result.rows[0];
+
+    if (album.artist !== artist) {
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
   }
 
   async addLikeToAlbum(userId, albumId) {
