@@ -39,6 +39,21 @@ class PlaylistsHandler {
     };
   }
 
+  async putPlaylistByIdHandler(request) {
+    this._validator.validatePostPlaylistPayload(request.payload);
+    const { name } = request.payload;
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._playlistsService.verifyPlaylistOwner(id, credentialId);
+    await this._playlistsService.editPlaylistById(id, name);
+
+    return {
+      status: 'success',
+      message: 'Playlist berhasil diperbarui',
+    };
+  }
+
   async deletePlaylistByIdHandler(request) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
