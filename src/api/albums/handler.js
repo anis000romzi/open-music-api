@@ -13,7 +13,9 @@ class AlbumsHandler {
 
   async postAlbumHandler(request, h) {
     this._albumsValidator.validateAlbumPayload(request.payload);
-    const albumId = await this._albumsService.addAlbum(request.payload);
+    const { id: credentialId } = request.auth.credentials;
+
+    const albumId = await this._albumsService.addAlbum(request.payload, credentialId);
 
     const response = h.response({
       status: 'success',
@@ -51,7 +53,9 @@ class AlbumsHandler {
   async putAlbumByIdHandler(request) {
     this._albumsValidator.validateAlbumPayload(request.payload);
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
     await this._albumsService.editAlbumById(id, request.payload);
 
     return {
@@ -62,7 +66,9 @@ class AlbumsHandler {
 
   async deleteAlbumByIdHandler(request) {
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
     await this._albumsService.deleteAlbumById(id);
 
     return {
@@ -119,9 +125,11 @@ class AlbumsHandler {
   async postUploadCoverHandler(request, h) {
     const { id } = request.params;
     const { cover } = request.payload;
+    const { id: credentialId } = request.auth.credentials;
     this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
 
     await this._albumsService.getAlbumById(id);
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
     const filename = await this._storageService.writeFile(cover, cover.hapi);
     const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
     await this._albumsService.addCoverToAlbum(id, fileLocation);

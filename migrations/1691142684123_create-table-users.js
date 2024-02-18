@@ -4,6 +4,11 @@ exports.up = (pgm) => {
       type: 'VARCHAR(50)',
       primaryKey: true,
     },
+    email: {
+      type: 'TEXT',
+      unique: true,
+      notNull: true,
+    },
     username: {
       type: 'VARCHAR(50)',
       unique: true,
@@ -16,6 +21,16 @@ exports.up = (pgm) => {
     fullname: {
       type: 'TEXT',
       notNull: true,
+    },
+    is_active: {
+      type: 'BOOLEAN',
+      notNull: true,
+    },
+    created_at: {
+      type: 'TIMESTAMP',
+    },
+    updated_at: {
+      type: 'TIMESTAMP',
     },
   });
 };

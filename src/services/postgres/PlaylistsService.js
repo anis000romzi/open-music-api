@@ -13,9 +13,12 @@ class PlaylistsService {
   async addPlaylist(name, owner) {
     const id = `playlist-${nanoid(16)}`;
 
+    const createdAt = new Date().toISOString();
+    const updatedAt = createdAt;
+
     const query = {
-      text: 'INSERT INTO playlists VALUES($1, $2, $3) RETURNING id',
-      values: [id, name, owner],
+      text: 'INSERT INTO playlists VALUES($1, $2, $3, $4, $5) RETURNING id',
+      values: [id, name, owner, createdAt, updatedAt],
     };
 
     const result = await this._pool.query(query);
@@ -25,6 +28,21 @@ class PlaylistsService {
     }
 
     return result.rows[0].id;
+  }
+
+  async editPlaylistById(id, name) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE playlists SET name = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+      values: [name, updatedAt, id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows[0].id) {
+      throw new NotFoundError('Gagal memperbarui playlist. Id tidak ditemukan');
+    }
   }
 
   async getPlaylists(owner) {
