@@ -37,6 +37,27 @@ const routes = (handler) => [
   },
   {
     method: 'POST',
+    path: '/songs/{id}/likes',
+    handler: handler.postSongLikeHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/songs/{id}/likes',
+    handler: handler.deleteSongLikeHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/songs/{id}/likes',
+    handler: handler.getSongLikeHandler,
+  },
+  {
+    method: 'POST',
     path: '/songs/{id}/audios',
     handler: handler.postUploadAudioHandler,
     options: {

@@ -112,7 +112,7 @@ class AlbumsService {
       throw new InvariantError('Gagal menambahkan like ke album');
     }
 
-    const id = `like-${nanoid(16)}`;
+    const id = `like_album-${nanoid(16)}`;
 
     const query = {
       text: 'INSERT INTO user_album_likes VALUES($1, $2, $3)',

@@ -77,6 +77,49 @@ class SongsHandler {
     };
   }
 
+  async postSongLikeHandler(request, h) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._songsService.getSongById(id);
+    await this._songsService.addLikeToSong(credentialId, id);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Like berhasil ditambahkan ke lagu',
+    });
+
+    response.code(201);
+    return response;
+  }
+
+  async deleteSongLikeHandler(request) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._songsService.deleteLikeFromSong(credentialId, id);
+
+    return {
+      status: 'success',
+      message: 'Like berhasil dihapus dari lagu',
+    };
+  }
+
+  async getSongLikeHandler(request, h) {
+    const { id } = request.params;
+
+    const likes = await this._songsService.getSongLikes(id);
+
+    const response = h.response({
+      status: 'success',
+      data: {
+        likes: likes.result.length,
+      },
+    });
+
+    return response;
+  }
+
   async postUploadAudioHandler(request, h) {
     const { id } = request.params;
     const { audio } = request.payload;
@@ -85,8 +128,10 @@ class SongsHandler {
 
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
+
     const filename = await this._storageService.writeFile(audio, audio.hapi);
     const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/audio/${filename}`;
+
     await this._songsService.addAudioToSong(id, fileLocation);
 
     const response = h.response({

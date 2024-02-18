@@ -200,6 +200,62 @@ class SongsService {
       throw new InvariantError('Gagal menghapus lagu dari playlist');
     }
   }
+
+  async addLikeToSong(userId, songId) {
+    const likeData = await this.verifySongLikes(userId, songId);
+
+    if (likeData.rows.length) {
+      throw new InvariantError('Gagal menambahkan like ke lagu');
+    }
+
+    const id = `like_song-${nanoid(16)}`;
+
+    const query = {
+      text: 'INSERT INTO user_song_likes VALUES($1, $2, $3)',
+      values: [id, userId, songId],
+    };
+
+    await this._pool.query(query);
+  }
+
+  async deleteLikeFromSong(userId, songId) {
+    const query = {
+      text: 'DELETE FROM user_song_likes WHERE user_id = $1 AND song_id = $2 RETURNING id',
+      values: [userId, songId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Gagal menghapus like dari lagu');
+    }
+  }
+
+  async getSongLikes(id) {
+    const query = {
+      text: `SELECT * FROM users
+      LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
+      WHERE user_song_likes.song_id = $1`,
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return {
+      result: result.rows,
+    };
+  }
+
+  async verifySongLikes(userId, songId) {
+    const query = {
+      text: 'SELECT id FROM user_song_likes WHERE user_id = $1 AND song_id = $2',
+      values: [userId, songId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result;
+  }
 }
 
 module.exports = SongsService;
