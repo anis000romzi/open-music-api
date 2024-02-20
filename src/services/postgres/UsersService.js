@@ -1,13 +1,13 @@
 const { nanoid } = require('nanoid');
-const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthenticationError = require('../../exceptions/AuthenticationError');
 
 class UsersService {
   constructor(cacheService) {
-    this._pool = new Pool();
+    this._pool = pool;
     this._cacheService = cacheService;
   }
 
@@ -141,10 +141,10 @@ class UsersService {
     }
   }
 
-  async verifyUserCredential(username, password) {
+  async verifyUserCredential(usernameOrEmail, password) {
     const query = {
-      text: 'SELECT id, password, is_active FROM users WHERE username = $1',
-      values: [username],
+      text: 'SELECT id, password, is_active FROM users WHERE username = $1 OR email = $1',
+      values: [usernameOrEmail],
     };
 
     const result = await this._pool.query(query);

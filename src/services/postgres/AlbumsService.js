@@ -1,12 +1,12 @@
-const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class AlbumsService {
   constructor(cacheService) {
-    this._pool = new Pool();
+    this._pool = pool;
     this._cacheService = cacheService;
   }
 

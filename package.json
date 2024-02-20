@@ -1,13 +1,17 @@
 {
   "name": "open-music-api",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node ./src/server.js",
-    "start-dev": "nodemon ./src/server.js",
+    "start:dev": "nodemon ./src/server.js",
     "lint": "eslint ./",
-    "migrate": "node-pg-migrate"
+    "migrate": "node-pg-migrate",
+    "migrate:test": "node-pg-migrate -f config/database/test.json",
+    "test": "jest --setupFiles dotenv/config -i",
+    "test:watch:change": "jest --watch --setupFiles dotenv/config -i",
+    "test:watch": "jest --watchAll --coverage --setupFiles dotenv/config -i"
   },
   "keywords": [],
   "author": "",
@@ -27,9 +31,11 @@
     "redis": "^4.6.8"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "eslint": "^8.45.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.27.5",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.1"
   }
 }

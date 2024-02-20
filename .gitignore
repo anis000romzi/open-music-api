@@ -1,5 +1,7 @@
 node_modules
 .env
+config/database/test.json
+coverage
 package-lock.json
 src/api/albums/file
 src/api/songs/file
