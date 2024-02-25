@@ -3,6 +3,7 @@ const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
 const InvariantError = require('../../../exceptions/InvariantError');
 const NotFoundError = require('../../../exceptions/NotFoundError');
 const AuthenticationError = require('../../../exceptions/AuthenticationError');
+const AuthorizationError = require('../../../exceptions/AuthorizationError');
 const pool = require('../pool');
 const UsersService = require('../UsersService');
 
@@ -57,6 +58,9 @@ describe('UsersService', () => {
         email: 'testing@gmail.com',
         username: 'testing',
         fullname: 'Testing testing',
+        description: 'This is a testing account',
+        is_active: false,
+        picture: 'path/to/file',
       });
     });
   });
@@ -82,12 +86,7 @@ describe('UsersService', () => {
       const user = await usersService.getUserByEmail('testing@gmail.com');
 
       // Action
-      expect(user).toStrictEqual({
-        id: 'user-123',
-        email: 'testing@gmail.com',
-        username: 'testing',
-        fullname: 'Testing testing',
-      });
+      expect(user).toStrictEqual({ id: 'user-123' });
     });
   });
 
@@ -148,8 +147,8 @@ describe('UsersService', () => {
       const usersService = new UsersService({});
 
       // Action & Assert
-      await expect(usersService.verifyUserCredential('testing@gmail.com', 'secret')).rejects.toThrowError(AuthenticationError);
-      await expect(usersService.verifyUserCredential('testing', 'secret')).rejects.toThrowError(AuthenticationError);
+      await expect(usersService.verifyUserCredential('testing@gmail.com', 'secret')).rejects.toThrowError(AuthorizationError);
+      await expect(usersService.verifyUserCredential('testing', 'secret')).rejects.toThrowError(AuthorizationError);
     });
 
     it('should return correct user id when user credential match and user is active', async () => {

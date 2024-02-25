@@ -2,9 +2,14 @@ const Joi = require('joi');
 
 const UserPayloadSchema = Joi.object({
   email: Joi.string().email().required(),
-  username: Joi.string().max(50).required(),
+  username: Joi.string().trim().required().max(50),
   password: Joi.string().required(),
   fullname: Joi.string().required(),
 });
 
-module.exports = { UserPayloadSchema };
+const PutUserPayloadSchema = Joi.object({
+  fullname: Joi.string().required(),
+  description: Joi.string().required(),
+});
+
+module.exports = { UserPayloadSchema, PutUserPayloadSchema };

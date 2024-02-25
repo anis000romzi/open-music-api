@@ -11,10 +11,23 @@ const UsersTableTestHelper = {
     isActive = false,
     createdAt = '2024-02-17 04:02:55.751',
     updatedAt = '2024-02-17 04:02:55.751',
+    description = 'This is a testing account',
+    picture = 'path/to/file',
   }) {
     const query = {
-      text: 'INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8)',
-      values: [id, email, username, password, fullname, isActive, createdAt, updatedAt],
+      text: 'INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+      values: [
+        id,
+        email,
+        username,
+        password,
+        fullname,
+        isActive,
+        createdAt,
+        updatedAt,
+        description,
+        picture,
+      ],
     };
 
     await pool.query(query);

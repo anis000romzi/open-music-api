@@ -40,10 +40,8 @@ const CollaborationsValidator = require('./validator/collaborations');
 // playlist activities
 const ActivitiesService = require('./services/postgres/ActivitiesService');
 
-// Exports
-const _exports = require('./api/exports');
+// message broker
 const ProducerService = require('./services/rabbitmq/ProducerService');
-const ExportsValidator = require('./validator/exports');
 
 // uploads
 const StorageService = require('./services/storage/StorageService');
@@ -63,6 +61,7 @@ const init = async () => {
   const activitiesService = new ActivitiesService();
   const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
   const audioStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/audio'));
+  const pictureStorageService = new StorageService(path.resolve(__dirname, 'api/users/file/picture'));
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -131,8 +130,10 @@ const init = async () => {
     {
       plugin: users,
       options: {
-        service: usersService,
-        validator: UsersValidator,
+        usersService,
+        storageService: pictureStorageService,
+        uploadsValidator: UploadsValidator,
+        usersValidator: UsersValidator,
       },
     },
     {
@@ -153,14 +154,6 @@ const init = async () => {
         playlistsService,
         usersService,
         validator: CollaborationsValidator,
-      },
-    },
-    {
-      plugin: _exports,
-      options: {
-        producerService: ProducerService,
-        playlistsService,
-        validator: ExportsValidator,
       },
     },
   ]);
@@ -194,7 +187,7 @@ const init = async () => {
   });
 
   await server.start();
-  console.log(`Server berjalan pada ${server.info.uri}`);
+  console.log(`Server running on ${server.info.uri}`);
 };
 
 init();

@@ -4,6 +4,7 @@ const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthenticationError = require('../../exceptions/AuthenticationError');
+const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class UsersService {
   constructor(cacheService) {
@@ -23,8 +24,10 @@ class UsersService {
     const updatedAt = createdAt;
 
     const query = {
-      text: 'INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-      values: [id, email, username, hashedPassword, fullname, false, createdAt, updatedAt],
+      text: 'INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
+      values: [
+        id, email, username, hashedPassword, fullname, false, createdAt, updatedAt, null, null,
+      ],
     };
 
     const result = await this._pool.query(query);
@@ -38,7 +41,7 @@ class UsersService {
 
   async getUserById(userId) {
     const query = {
-      text: 'SELECT id, email, username, fullname FROM users WHERE id = $1',
+      text: 'SELECT id, email, username, fullname, description, picture, is_active FROM users WHERE id = $1',
       values: [userId],
     };
 
@@ -53,7 +56,7 @@ class UsersService {
 
   async getUserByEmail(email) {
     const query = {
-      text: 'SELECT id, email, username, fullname FROM users WHERE email = $1',
+      text: 'SELECT id FROM users WHERE email = $1',
       values: [email],
     };
 
@@ -66,8 +69,44 @@ class UsersService {
     return result.rows[0];
   }
 
-  async activateUser(email, otp) {
-    const storedOtp = await this._cacheService.get(`verify:${email}`);
+  async editUserById(id, { fullname, description }) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE users SET fullname = $1, description = $2, updated_at = $3 WHERE id = $4 RETURNING id',
+      values: [fullname, description, updatedAt, id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Gagal memperbarui user. Id tidak ditemukan');
+    }
+  }
+
+  // only edit email if user is not active yet
+  async editUserEmailById(id, email) {
+    const updatedAt = new Date().toISOString();
+    const { is_active: isActive } = await this.getUserById(id);
+
+    if (isActive) {
+      throw new AuthorizationError('Gagal mengganti email user. User telah aktif');
+    }
+
+    const query = {
+      text: 'UPDATE users SET email = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+      values: [email, updatedAt, id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Gagal mengganti email user. Id tidak ditemukan');
+    }
+  }
+
+  async activateUserById(id, otp) {
+    const storedOtp = await this._cacheService.get(`verify:${id}`);
 
     if (storedOtp !== otp) {
       throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
@@ -76,8 +115,8 @@ class UsersService {
     const updatedAt = new Date().toISOString();
 
     const query = {
-      text: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE email = $3 RETURNING id',
-      values: [true, updatedAt, email],
+      text: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+      values: [true, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
@@ -86,12 +125,12 @@ class UsersService {
       throw new InvariantError('Gagal mengaktifkan user');
     }
 
-    await this._cacheService.delete(`verify:${email}`);
+    await this._cacheService.delete(`verify:${id}`);
     return result.rows[0].id;
   }
 
-  async resetUserPassword(email, otp, password) {
-    const storedOtp = await this._cacheService.get(`forgot:${email}`);
+  async resetUserPasswordById(id, otp, password) {
+    const storedOtp = await this._cacheService.get(`forgot:${id}`);
 
     if (storedOtp !== otp) {
       throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
@@ -101,8 +140,8 @@ class UsersService {
     const updatedAt = new Date().toISOString();
 
     const query = {
-      text: 'UPDATE users SET password = $1, updated_at = $2 WHERE email = $3 RETURNING id',
-      values: [hashedPassword, updatedAt, email],
+      text: 'UPDATE users SET password = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+      values: [hashedPassword, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
@@ -111,7 +150,7 @@ class UsersService {
       throw new InvariantError('Gagal mengubah password user');
     }
 
-    await this._cacheService.delete(`forgot:${email}`);
+    await this._cacheService.delete(`forgot:${id}`);
     return result.rows[0].id;
   }
 
@@ -162,10 +201,40 @@ class UsersService {
     }
 
     if (!isActive) {
-      throw new AuthenticationError('Silahkan verifikasi akun anda');
+      throw new AuthorizationError('Silahkan verifikasi akun anda');
     }
 
     return id;
+  }
+
+  async verifyLoggedUser(id, loggedUser) {
+    const query = {
+      text: 'SELECT id FROM users WHERE id = $1',
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('User tidak ditemukan');
+    }
+
+    const user = result.rows[0];
+
+    if (user.id !== loggedUser) {
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
+  }
+
+  async addProfilePicture(id, fileLocation) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE users SET picture = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
   }
 }
 
