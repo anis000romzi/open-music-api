@@ -72,14 +72,13 @@ class AuthenticationsHandler {
   }
 
   async postVerificationCodeHandler(request, h) {
-    const { email } = request.payload;
+    const { userId } = request.payload;
 
     const nanoid = customAlphabet('1234567890', 6);
     const otp = `${nanoid()}`;
 
-    await this._usersService.getUserByEmail(email);
-    await this._cacheService.set(`verify:${email}`, otp);
-    await this._producerService.sendMessage('auth:verify', JSON.stringify({ email, otp }));
+    const { email } = await this._usersService.getUserById(userId);
+    await this._producerService.sendMessage('auth:verify', JSON.stringify({ userId, email, otp }));
 
     const response = h.response({
       status: 'success',
@@ -91,14 +90,15 @@ class AuthenticationsHandler {
   }
 
   async postResetPasswordRequest(request, h) {
-    const { email } = request.payload;
+    const { userId } = request.payload;
 
     const nanoid = customAlphabet('1234567890', 6);
     const otp = `${nanoid()}`;
 
-    const { username } = await this._usersService.getUserByEmail(email);
-    await this._cacheService.set(`forgot:${email}`, otp);
-    await this._producerService.sendMessage('auth:forgot', JSON.stringify({ username, email, otp }));
+    const { email, username } = await this._usersService.getUserById(userId);
+    await this._producerService.sendMessage('auth:forgot', JSON.stringify({
+      userId, username, email, otp,
+    }));
 
     const response = h.response({
       status: 'success',
