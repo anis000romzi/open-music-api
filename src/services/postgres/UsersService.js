@@ -56,7 +56,7 @@ class UsersService {
 
   async getUserByEmail(email) {
     const query = {
-      text: 'SELECT id FROM users WHERE email = $1',
+      text: 'SELECT id, username FROM users WHERE email = $1',
       values: [email],
     };
 
@@ -182,7 +182,7 @@ class UsersService {
 
   async verifyUserCredential(usernameOrEmail, password) {
     const query = {
-      text: 'SELECT id, password, is_active FROM users WHERE username = $1 OR email = $1',
+      text: 'SELECT id, password FROM users WHERE username = $1 OR email = $1',
       values: [usernameOrEmail],
     };
 
@@ -192,16 +192,12 @@ class UsersService {
       throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
 
-    const { id, password: hashedPassword, is_active: isActive } = result.rows[0];
+    const { id, password: hashedPassword } = result.rows[0];
 
     const match = await bcrypt.compare(password, hashedPassword);
 
     if (!match) {
       throw new AuthenticationError('Kredensial yang Anda berikan salah');
-    }
-
-    if (!isActive) {
-      throw new AuthorizationError('Silahkan verifikasi akun anda');
     }
 
     return id;
