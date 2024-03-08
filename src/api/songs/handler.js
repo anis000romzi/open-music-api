@@ -39,6 +39,28 @@ class SongsHandler {
     };
   }
 
+  async getFavoriteSongsHandler() {
+    const songs = await this._songsService.getFavoriteSongs();
+
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
+  }
+
+  async getRecentSongsHandler() {
+    const songs = await this._songsService.getRecentSongs();
+
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
+  }
+
   async getSongByIdHandler(request) {
     const { id } = request.params;
     const song = await this._songsService.getSongById(id);

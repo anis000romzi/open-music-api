@@ -70,6 +70,36 @@ class SongsService {
     return result.rows;
   }
 
+  async getFavoriteSongs() {
+    const query = {
+      text: `SELECT songs.id, songs.title, albums.name as album, users.username as artist, songs.audio, COUNT(DISTINCT user_song_likes.user_id) AS likes
+      FROM songs
+      LEFT JOIN users ON users.id = songs.artist
+      LEFT JOIN albums ON albums.id = songs.album_id
+      LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
+      GROUP BY songs.id, songs.title, albums.name, users.username, songs.audio
+      ORDER BY likes DESC`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async getRecentSongs() {
+    const query = {
+      text: `SELECT songs.id, songs.title, albums.name as album, users.username as artist, songs.audio
+      FROM songs
+      LEFT JOIN users ON users.id = songs.artist
+      LEFT JOIN albums ON albums.id = songs.album_id
+      ORDER BY songs.created_at DESC`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
   async addAudioToSong(id, fileLocation) {
     const updatedAt = new Date().toISOString();
 
@@ -109,13 +139,13 @@ class SongsService {
   }
 
   async editSongById(id, {
-    title, year, genre, artist, duration, albumId,
+    title, year, genre, duration, albumId,
   }) {
     const updatedAt = new Date().toISOString();
 
     const query = {
-      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, artist = $4, duration = $5, album_id = $6, updated_at = $7 WHERE id = $8 RETURNING id',
-      values: [title, year, genre, artist, duration, albumId, updatedAt, id],
+      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, duration = $4, album_id = $5, updated_at = $6 WHERE id = $7 RETURNING id',
+      values: [title, year, genre, duration, albumId, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
