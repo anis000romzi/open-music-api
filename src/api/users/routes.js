@@ -7,6 +7,14 @@ const routes = (handler) => [
     handler: handler.postUserHandler,
   },
   {
+    method: 'GET',
+    path: '/users/me',
+    handler: handler.getUserByIdHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
     method: 'PUT',
     path: '/users/{id}',
     handler: handler.putUserByIdHandler,

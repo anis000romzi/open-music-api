@@ -10,6 +10,19 @@ class UsersHandler {
     autoBind(this);
   }
 
+  async getUserByIdHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+
+    const users = await this._usersService.getUserById(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        users,
+      },
+    };
+  }
+
   async postUserHandler(request, h) {
     this._usersValidator.validateUserPayload(request.payload);
     const {
@@ -104,7 +117,7 @@ class UsersHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Foto berhasil diunggah',
+      message: 'Foto profile berhasil diunggah',
       data: {
         fileLocation,
       },
