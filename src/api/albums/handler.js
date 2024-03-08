@@ -50,6 +50,17 @@ class AlbumsHandler {
     };
   }
 
+  async getFavoriteAlbumsHandler() {
+    const albums = await this._albumsService.getFavoriteAlbums();
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
   async putAlbumByIdHandler(request) {
     this._albumsValidator.validateAlbumPayload(request.payload);
     const { id } = request.params;
@@ -119,6 +130,7 @@ class AlbumsHandler {
     if (likes.cache) {
       response.header('X-Data-Source', 'cache');
     }
+
     return response;
   }
 
@@ -130,8 +142,10 @@ class AlbumsHandler {
 
     await this._albumsService.getAlbumById(id);
     await this._albumsService.verifyAlbumArtist(id, credentialId);
+
     const filename = await this._storageService.writeFile(cover, cover.hapi);
     const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
+
     await this._albumsService.addCoverToAlbum(id, fileLocation);
 
     const response = h.response({
