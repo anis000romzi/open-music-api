@@ -32,12 +32,13 @@ class AlbumsService {
 
   async getAlbumById(albumId) {
     const query = {
-      text: `SELECT albums.id, albums.name, albums.year, users.username, albums.cover
+      text: `SELECT albums.id, albums.name, albums.year, users.username as artist, albums.cover
       FROM albums
       LEFT JOIN users ON users.id = albums.artist
       WHERE albums.id = $1`,
       values: [albumId],
     };
+
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
@@ -45,6 +46,21 @@ class AlbumsService {
     }
 
     return result.rows[0];
+  }
+
+  async getFavoriteAlbums() {
+    const query = {
+      text: `SELECT albums.id, albums.name, albums.year, users.username as artist, albums.cover, COUNT(DISTINCT user_album_likes.user_id) AS likes
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
+      GROUP BY albums.id, albums.name, albums.year, users.username, albums.cover
+      ORDER BY likes DESC`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
   }
 
   async editAlbumById(id, { name, year }) {
