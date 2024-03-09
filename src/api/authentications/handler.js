@@ -38,6 +38,7 @@ class AuthenticationsHandler {
         refreshToken,
       },
     });
+
     response.code(201);
     return response;
   }
@@ -90,12 +91,12 @@ class AuthenticationsHandler {
   }
 
   async postResetPasswordRequest(request, h) {
-    const { userId } = request.payload;
+    const { email } = request.payload;
 
     const nanoid = customAlphabet('1234567890', 6);
     const otp = `${nanoid()}`;
 
-    const { email, username } = await this._usersService.getUserById(userId);
+    const { id: userId, username } = await this._usersService.getUserByEmail(email);
     await this._producerService.sendMessage('auth:forgot', JSON.stringify({
       userId, username, email, otp,
     }));
@@ -103,6 +104,9 @@ class AuthenticationsHandler {
     const response = h.response({
       status: 'success',
       message: 'Permintaan Anda sedang kami proses',
+      data: {
+        userId,
+      },
     });
 
     response.code(201);
