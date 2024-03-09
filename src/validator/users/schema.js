@@ -12,4 +12,8 @@ const PutUserPayloadSchema = Joi.object({
   description: Joi.string().required(),
 });
 
-module.exports = { UserPayloadSchema, PutUserPayloadSchema };
+const PutUserEmailPayloadSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+module.exports = { UserPayloadSchema, PutUserPayloadSchema, PutUserEmailPayloadSchema };

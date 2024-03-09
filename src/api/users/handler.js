@@ -59,10 +59,10 @@ class UsersHandler {
 
   // only edit email if user is not active yet
   async editUserEmailHandler(request) {
+    this._usersValidator.validatePutUserEmailPayload(request.payload);
     const { id } = request.params;
     const { email } = request.payload;
 
-    await this._usersService.getUserById(id);
     await this._usersService.editUserEmailById(id, email);
 
     return {

@@ -85,9 +85,13 @@ class UsersService {
   }
 
   // only edit email if user is not active yet
-  async editUserEmailById(id, email) {
+  async editUserEmailById(id, newEmail) {
     const updatedAt = new Date().toISOString();
-    const { is_active: isActive } = await this.getUserById(id);
+    const { is_active: isActive, email } = await this.getUserById(id);
+
+    if (newEmail !== email) {
+      await this.verifyNewEmail(newEmail);
+    }
 
     if (isActive) {
       throw new AuthorizationError('Gagal mengganti email user. User telah aktif');
@@ -95,7 +99,7 @@ class UsersService {
 
     const query = {
       text: 'UPDATE users SET email = $1, updated_at = $2 WHERE id = $3 RETURNING id',
-      values: [email, updatedAt, id],
+      values: [newEmail, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
