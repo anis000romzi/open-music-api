@@ -5,10 +5,11 @@ module.exports = {
   name: 'users',
   version: '2.0.0',
   register: async (server, {
-    usersService, storageService, uploadsValidator, usersValidator,
+    usersService, albumsService, storageService, uploadsValidator, usersValidator,
   }) => {
     const usersHandler = new UsersHandler(
       usersService,
+      albumsService,
       storageService,
       uploadsValidator,
       usersValidator,

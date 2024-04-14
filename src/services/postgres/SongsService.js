@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const { getAudioDurationInSeconds } = require('get-audio-duration');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
@@ -33,14 +34,14 @@ class SongsService {
 
   async getSongs(title, artist) {
     let query = {
-      text: `SELECT songs.id, songs.title, users.username, songs.audio
+      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
       FROM songs
       LEFT JOIN users ON users.id = songs.artist`,
     };
 
     if (title !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.username, songs.audio
+        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%'`,
@@ -49,19 +50,19 @@ class SongsService {
     }
     if (artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.username, songs.audio
+        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
-        WHERE users.username ILIKE '%' || $1 || '%'`,
+        WHERE users.fullname ILIKE '%' || $1 || '%'`,
         values: [artist],
       };
     }
     if (title !== undefined && artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.username, songs.audio
+        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
-        WHERE songs.title ILIKE '%' || $1 || '%' AND users.username ILIKE '%' || $2 || '%'`,
+        WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%'`,
         values: [title, artist],
       };
     }
@@ -103,9 +104,11 @@ class SongsService {
   async addAudioToSong(id, fileLocation) {
     const updatedAt = new Date().toISOString();
 
+    const newDuration = await getAudioDurationInSeconds(fileLocation);
+
     const query = {
-      text: 'UPDATE songs SET audio = $1, updated_at = $2 WHERE id = $3',
-      values: [fileLocation, updatedAt, id],
+      text: 'UPDATE songs SET duration = $1, audio = $2, updated_at = $3 WHERE id = $4',
+      values: [Math.floor(newDuration), fileLocation, updatedAt, id],
     };
 
     await this._pool.query(query);
@@ -127,7 +130,7 @@ class SongsService {
 
   async getSongsByAlbum(id) {
     const query = {
-      text: `SELECT songs.id, songs.title, users.username, songs.audio
+      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.album_id = $1`,
@@ -203,14 +206,29 @@ class SongsService {
     return result.rows[0].id;
   }
 
+  async addSongToAlbum(albumId, songId) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE songs SET album_id = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+      values: [albumId, songId, updatedAt],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Gagal menambahkan lagu ke album');
+    }
+    return result.rows[0].id;
+  }
+
   async getSongsByPlaylist(id) {
     const query = {
-      text: `SELECT songs.id, songs.title, users.username
+      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
       FROM songs
       LEFT JOIN playlist_songs ON playlist_songs.song_id = songs.id
       LEFT JOIN users ON users.id = songs.artist
-      WHERE playlist_songs.playlist_id = $1
-      GROUP BY songs.id`,
+      WHERE playlist_songs.playlist_id = $1`,
       values: [id],
     };
 
@@ -263,7 +281,7 @@ class SongsService {
 
   async getSongLikes(id) {
     const query = {
-      text: `SELECT * FROM users
+      text: `SELECT users.id FROM users
       LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
       WHERE user_song_likes.song_id = $1`,
       values: [id],
