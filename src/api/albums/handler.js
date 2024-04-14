@@ -31,7 +31,7 @@ class AlbumsHandler {
   async getAlbumByIdHandler(request) {
     const { id } = request.params;
     const {
-      id: albumId, name, year, cover: coverUrl,
+      id: albumId, name, year, artist_id: artistId, artist, cover: coverUrl,
     } = await this._albumsService.getAlbumById(id);
 
     const songs = await this._songsService.getSongsByAlbum(id);
@@ -43,6 +43,8 @@ class AlbumsHandler {
           id: albumId,
           name,
           year,
+          artistId,
+          artist,
           coverUrl,
           songs,
         },
@@ -50,8 +52,20 @@ class AlbumsHandler {
     };
   }
 
-  async getFavoriteAlbumsHandler() {
-    const albums = await this._albumsService.getFavoriteAlbums();
+  async getAlbumsByArtistHandler(request) {
+    const { id } = request.params;
+    const albums = await this._albumsService.getAlbumsByArtist(id);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getPopularAlbumsHandler() {
+    const albums = await this._albumsService.getPopularAlbums();
 
     return {
       status: 'success',

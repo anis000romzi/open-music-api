@@ -16,8 +16,13 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
-    path: '/albums/favorite',
-    handler: handler.getFavoriteAlbumsHandler,
+    path: '/albums/artist/{id}',
+    handler: handler.getAlbumsByArtistHandler,
+  },
+  {
+    method: 'GET',
+    path: '/albums/popular',
+    handler: handler.getPopularAlbumsHandler,
   },
   {
     method: 'PUT',
