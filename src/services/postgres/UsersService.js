@@ -22,11 +22,21 @@ class UsersService {
     const hashedPassword = await bcrypt.hash(password, 10);
     const createdAt = new Date().toISOString();
     const updatedAt = createdAt;
+    const defaultPicture = `https://ui-avatars.com/api/?name=${fullname}&background=random&size=128`;
 
     const query = {
       text: 'INSERT INTO users VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
       values: [
-        id, email, username, hashedPassword, fullname, false, createdAt, updatedAt, null, null,
+        id,
+        email,
+        username,
+        hashedPassword,
+        fullname,
+        false,
+        createdAt,
+        updatedAt,
+        null,
+        defaultPicture,
       ],
     };
 
@@ -235,6 +245,62 @@ class UsersService {
     };
 
     await this._pool.query(query);
+  }
+
+  async addFollowerToArtist(userId, artistId) {
+    const followData = await this.verifyUserFollow(userId, artistId);
+
+    if (followData.rows.length) {
+      throw new InvariantError('Gagal mengikuti artist');
+    }
+
+    const id = `follow-${nanoid(16)}`;
+
+    const query = {
+      text: 'INSERT INTO follower_artist VALUES($1, $2, $3)',
+      values: [id, userId, artistId],
+    };
+
+    await this._pool.query(query);
+  }
+
+  async deleteFollowerFromArtist(userId, artistId) {
+    const query = {
+      text: 'DELETE FROM follower_artist WHERE user_id = $1 AND artist_id = $2 RETURNING id',
+      values: [userId, artistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Gagal berhenti mengikuti artist');
+    }
+  }
+
+  async getArtistFollower(id) {
+    const query = {
+      text: `SELECT users.id FROM users
+      LEFT JOIN follower_artist ON follower_artist.user_id = users.id
+      WHERE follower_artist.artist_id = $1`,
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return {
+      result: result.rows,
+    };
+  }
+
+  async verifyUserFollow(userId, artistId) {
+    const query = {
+      text: 'SELECT id FROM follower_artist WHERE user_id = $1 AND artist_id = $2',
+      values: [userId, artistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result;
   }
 }
 

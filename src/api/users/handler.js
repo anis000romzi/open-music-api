@@ -1,8 +1,15 @@
 const autoBind = require('auto-bind');
 
 class UsersHandler {
-  constructor(usersService, storageService, uploadsValidator, usersValidator) {
+  constructor(
+    usersService,
+    albumsService,
+    storageService,
+    uploadsValidator,
+    usersValidator,
+  ) {
     this._usersService = usersService;
+    this._albumsService = albumsService;
     this._storageService = storageService;
     this._usersValidator = usersValidator;
     this._uploadsValidator = uploadsValidator;
@@ -10,7 +17,7 @@ class UsersHandler {
     autoBind(this);
   }
 
-  async getUserByIdHandler(request) {
+  async getLoggedUserHandler(request) {
     const { id: credentialId } = request.auth.credentials;
 
     const users = await this._usersService.getUserById(credentialId);
@@ -23,6 +30,28 @@ class UsersHandler {
     };
   }
 
+  async getUserByIdHandler(request) {
+    const { id: userId } = request.params;
+
+    const {
+      id, email, username, fullname, description, picture,
+    } = await this._usersService.getUserById(userId);
+    const albums = await this._albumsService.getAlbumsByArtist(userId);
+
+    return {
+      status: 'success',
+      data: {
+        id,
+        email,
+        username,
+        fullname,
+        description,
+        picture,
+        albums,
+      },
+    };
+  }
+
   async postUserHandler(request, h) {
     this._usersValidator.validateUserPayload(request.payload);
     const {
@@ -30,7 +59,10 @@ class UsersHandler {
     } = request.payload;
 
     const userId = await this._usersService.addUser({
-      email, username, password, fullname,
+      email,
+      username,
+      password,
+      fullname,
     });
 
     const response = h.response({
@@ -98,6 +130,49 @@ class UsersHandler {
     });
 
     response.code(201);
+    return response;
+  }
+
+  async postFollowArtistHandler(request, h) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._usersService.getUserById(credentialId);
+    await this._usersService.addFollowerToArtist(credentialId, id);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Berhasil mengikuti artist',
+    });
+
+    response.code(201);
+    return response;
+  }
+
+  async deleteFollowArtistHandler(request) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._usersService.deleteFollowerFromArtist(credentialId, id);
+
+    return {
+      status: 'success',
+      message: 'Berhasil berhenti mengikuti artist',
+    };
+  }
+
+  async getArtistFollowerHandler(request, h) {
+    const { id } = request.params;
+
+    const followers = await this._usersService.getArtistFollower(id);
+
+    const response = h.response({
+      status: 'success',
+      data: {
+        followers: followers.result.length,
+      },
+    });
+
     return response;
   }
 

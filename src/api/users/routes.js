@@ -9,10 +9,15 @@ const routes = (handler) => [
   {
     method: 'GET',
     path: '/users/me',
-    handler: handler.getUserByIdHandler,
+    handler: handler.getLoggedUserHandler,
     options: {
       auth: 'openmusic_jwt',
     },
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}',
+    handler: handler.getUserByIdHandler,
   },
   {
     method: 'PUT',
@@ -36,6 +41,27 @@ const routes = (handler) => [
     method: 'PUT',
     path: '/users/{id}/editemail',
     handler: handler.editUserEmailHandler,
+  },
+  {
+    method: 'POST',
+    path: '/users/{id}/follow',
+    handler: handler.postFollowArtistHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/users/{id}/follow',
+    handler: handler.deleteFollowArtistHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/users/{id}/follow',
+    handler: handler.getArtistFollowerHandler,
   },
   {
     method: 'POST',
