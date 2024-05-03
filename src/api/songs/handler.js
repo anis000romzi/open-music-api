@@ -1,9 +1,16 @@
 const autoBind = require('auto-bind');
 
 class SongsHandler {
-  constructor(songsService, storageService, songsValidator, uploadsValidator) {
+  constructor(
+    songsService,
+    audioStorageService,
+    coverStorageService,
+    songsValidator,
+    uploadsValidator,
+  ) {
     this._songsService = songsService;
-    this._storageService = storageService;
+    this._audioStorageService = audioStorageService;
+    this._coverStorageService = coverStorageService;
     this._songsValidator = songsValidator;
     this._uploadsValidator = uploadsValidator;
 
@@ -31,10 +38,21 @@ class SongsHandler {
     const { title, artist } = request.query;
     const songs = await this._songsService.getSongs(title, artist);
 
+    const mappedSongs = await Promise.all(
+      songs.map(async (song) => {
+        const likes = await this._songsService.getSongLikes(song.id);
+        const mappedLikes = likes.result.map((like) => like.id);
+        return {
+          ...song,
+          likes: mappedLikes,
+        };
+      }),
+    );
+
     return {
       status: 'success',
       data: {
-        songs,
+        songs: mappedSongs,
       },
     };
   }
@@ -50,8 +68,55 @@ class SongsHandler {
     };
   }
 
+  async getLikedSongsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const songs = await this._songsService.getLikedSongs(credentialId);
+
+    const mappedSongs = await Promise.all(
+      songs.map(async (song) => {
+        const likes = await this._songsService.getSongLikes(song.id);
+        const mappedLikes = likes.result.map((like) => like.id);
+        return {
+          ...song,
+          likes: mappedLikes,
+        };
+      }),
+    );
+
+    return {
+      status: 'success',
+      data: {
+        songs: mappedSongs,
+      },
+    };
+  }
+
   async getRecentSongsHandler() {
     const songs = await this._songsService.getRecentSongs();
+
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
+  }
+
+  async getOwnedSongsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const songs = await this._songsService.getSongsByArtist(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        songs,
+      },
+    };
+  }
+
+  async getOwnedSinglesHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const songs = await this._songsService.getSinglesByArtist(credentialId);
 
     return {
       status: 'success',
@@ -151,7 +216,7 @@ class SongsHandler {
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
 
-    const filename = await this._storageService.writeFile(audio, audio.hapi);
+    const filename = await this._audioStorageService.writeFile(audio, audio.hapi);
     const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/audio/${filename}`;
 
     await this._songsService.addAudioToSong(id, fileLocation);
@@ -159,6 +224,32 @@ class SongsHandler {
     const response = h.response({
       status: 'success',
       message: 'Audio berhasil diunggah',
+      data: {
+        fileLocation,
+      },
+    });
+
+    response.code(201);
+    return response;
+  }
+
+  async postUploadCoverHandler(request, h) {
+    const { id } = request.params;
+    const { cover } = request.payload;
+    const { id: credentialId } = request.auth.credentials;
+    this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
+
+    await this._songsService.getSongById(id);
+    await this._songsService.verifySongArtist(id, credentialId);
+
+    const filename = await this._coverStorageService.writeFile(cover, cover.hapi);
+    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/cover/${filename}`;
+
+    await this._songsService.addCoverToSong(id, fileLocation);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Sampul berhasil diunggah',
       data: {
         fileLocation,
       },

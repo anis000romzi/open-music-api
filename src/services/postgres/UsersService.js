@@ -49,6 +49,19 @@ class UsersService {
     return result.rows[0].id;
   }
 
+  async getPopularUsers() {
+    const query = {
+      text: `SELECT users.id, users.email, users.username, users.fullname, users.description, users.picture, COUNT(DISTINCT follower_artist.user_id) AS followers
+      FROM users
+      LEFT JOIN follower_artist ON follower_artist.artist_id = users.id
+      GROUP BY users.id, users.email, users.username, users.fullname, users.description, users.picture
+      ORDER BY followers DESC LIMIT 20`,
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
   async getUserById(userId) {
     const query = {
       text: 'SELECT id, email, username, fullname, description, picture, is_active FROM users WHERE id = $1',

@@ -37,6 +37,10 @@ const collaborations = require('./api/collaborations');
 const CollaborationsService = require('./services/postgres/CollaborationsService');
 const CollaborationsValidator = require('./validator/collaborations');
 
+// genres
+const genres = require('./api/genres');
+const GenresService = require('./services/postgres/GenresService');
+
 // playlist activities
 const ActivitiesService = require('./services/postgres/ActivitiesService');
 
@@ -55,12 +59,14 @@ const init = async () => {
   const albumsService = new AlbumsService(cacheService);
   const songsService = new SongsService();
   const collaborationsService = new CollaborationsService();
+  const genresService = new GenresService();
   const playlistsService = new PlaylistsService(collaborationsService);
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
   const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
   const audioStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/audio'));
+  const songCoverStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/cover'));
   const pictureStorageService = new StorageService(path.resolve(__dirname, 'api/users/file/picture'));
 
   const server = Hapi.server({
@@ -113,7 +119,8 @@ const init = async () => {
       plugin: songs,
       options: {
         songsService,
-        storageService: audioStorageService,
+        audioStorageService,
+        coverStorageService: songCoverStorageService,
         songsValidator: SongsValidator,
         uploadsValidator: UploadsValidator,
       },
@@ -132,6 +139,7 @@ const init = async () => {
       options: {
         usersService,
         albumsService,
+        songsService,
         storageService: pictureStorageService,
         uploadsValidator: UploadsValidator,
         usersValidator: UsersValidator,
@@ -155,6 +163,12 @@ const init = async () => {
         playlistsService,
         usersService,
         validator: CollaborationsValidator,
+      },
+    },
+    {
+      plugin: genres,
+      options: {
+        genresService,
       },
     },
   ]);

@@ -50,7 +50,7 @@ class AlbumsService {
 
   async getAlbumsByArtist(artistId) {
     const query = {
-      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artistId, users.fullname as artist, albums.cover
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
       FROM albums
       LEFT JOIN users ON users.id = albums.artist
       WHERE albums.artist = $1`,
@@ -64,12 +64,27 @@ class AlbumsService {
 
   async getPopularAlbums() {
     const query = {
-      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artistId, users.fullname as artist, albums.cover, COUNT(DISTINCT user_album_likes.user_id) AS likes
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover, COUNT(DISTINCT user_album_likes.user_id) AS likes
       FROM albums
       LEFT JOIN users ON users.id = albums.artist
       LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
-      GROUP BY albums.id, albums.name, albums.year,  albums.artist, users.fullname, albums.cover
+      GROUP BY albums.id, albums.name, albums.year, albums.artist, users.fullname, albums.cover
       ORDER BY likes DESC LIMIT 20`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async getLikedAlbums(userId) {
+    const query = {
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
+      WHERE user_album_likes.user_id = $1`,
+      values: [userId],
     };
 
     const result = await this._pool.query(query);

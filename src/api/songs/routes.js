@@ -16,6 +16,11 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
+    path: '/songs/{id}',
+    handler: handler.getSongByIdHandler,
+  },
+  {
+    method: 'GET',
     path: '/songs/favorite',
     handler: handler.getFavoriteSongsHandler,
   },
@@ -26,8 +31,27 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
-    path: '/songs/{id}',
-    handler: handler.getSongByIdHandler,
+    path: '/songs/liked',
+    handler: handler.getLikedSongsHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/songs/me',
+    handler: handler.getOwnedSongsHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/songs/me/singles',
+    handler: handler.getOwnedSinglesHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
   },
   {
     method: 'PUT',
@@ -77,6 +101,20 @@ const routes = (handler) => [
         multipart: true,
         output: 'stream',
         maxBytes: 51200000,
+      },
+    },
+  },
+  {
+    method: 'POST',
+    path: '/songs/{id}/covers',
+    handler: handler.postUploadCoverHandler,
+    options: {
+      auth: 'openmusic_jwt',
+      payload: {
+        allow: 'multipart/form-data',
+        multipart: true,
+        output: 'stream',
+        maxBytes: 512000,
       },
     },
   },

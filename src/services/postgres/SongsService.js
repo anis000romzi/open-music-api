@@ -19,8 +19,8 @@ class SongsService {
     const updatedAt = createdAt;
 
     const query = {
-      text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
-      values: [id, title, year, genre, artist, duration, albumId, null, createdAt, updatedAt],
+      text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id',
+      values: [id, title, year, genre, artist, duration, albumId, null, createdAt, updatedAt, null],
     };
 
     const result = await this._pool.query(query);
@@ -34,14 +34,14 @@ class SongsService {
 
   async getSongs(title, artist) {
     let query = {
-      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
+      text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover
       FROM songs
       LEFT JOIN users ON users.id = songs.artist`,
     };
 
     if (title !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%'`,
@@ -50,7 +50,7 @@ class SongsService {
     }
     if (artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
         WHERE users.fullname ILIKE '%' || $1 || '%'`,
@@ -59,7 +59,7 @@ class SongsService {
     }
     if (title !== undefined && artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover
         FROM songs
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%'`,
@@ -80,6 +80,21 @@ class SongsService {
       LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
       GROUP BY songs.id, songs.title, albums.name, users.username, songs.audio
       ORDER BY likes DESC`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async getLikedSongs(userId) {
+    const query = {
+      text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover
+      FROM songs
+      LEFT JOIN users ON users.id = songs.artist
+      LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
+      WHERE user_song_likes.user_id = $1`,
+      values: [userId],
     };
 
     const result = await this._pool.query(query);
@@ -116,7 +131,25 @@ class SongsService {
 
   async getSongById(id) {
     const query = {
-      text: 'SELECT * FROM songs WHERE id = $1',
+      text: `SELECT         
+        songs.id, 
+        songs.title, 
+        albums.name as album, 
+        songs.year, 
+        users.fullname as artist, 
+        songs.artist as artist_id, 
+        genres.name as genre, 
+        songs.genre as genre_id, 
+        songs.duration, 
+        songs.audio, 
+        songs.cover 
+      FROM 
+        songs 
+        LEFT JOIN albums ON albums.id = songs.album_id 
+        LEFT JOIN genres ON genres.id = songs.genre 
+        LEFT JOIN users ON users.id = songs.artist 
+      WHERE
+        songs.id = $1`,
       values: [id],
     };
     const result = await this._pool.query(query);
@@ -130,11 +163,83 @@ class SongsService {
 
   async getSongsByAlbum(id) {
     const query = {
-      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
-        FROM songs
-        LEFT JOIN users ON users.id = songs.artist
-        WHERE songs.album_id = $1`,
+      text: `SELECT 
+        songs.id, 
+        songs.title, 
+        albums.name as album, 
+        songs.year, 
+        users.fullname as artist, 
+        songs.artist as artist_id, 
+        genres.name as genre, 
+        songs.genre as genre_id, 
+        songs.duration, 
+        songs.audio, 
+        songs.cover 
+      FROM 
+        songs 
+        LEFT JOIN albums ON albums.id = songs.album_id 
+        LEFT JOIN genres ON genres.id = songs.genre 
+        LEFT JOIN users ON users.id = songs.artist 
+      WHERE 
+        songs.album_id = $1`,
       values: [id],
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async getSongsByArtist(artistId) {
+    const query = {
+      text: `SELECT 
+        songs.id, 
+        songs.title, 
+        albums.name as album, 
+        songs.album_id,
+        songs.year, 
+        users.fullname as artist, 
+        songs.artist as artist_id, 
+        genres.name as genre, 
+        songs.genre as genre_id, 
+        songs.duration, 
+        songs.audio, 
+        songs.cover 
+      FROM 
+        songs 
+        LEFT JOIN albums ON albums.id = songs.album_id 
+        LEFT JOIN genres ON genres.id = songs.genre 
+        LEFT JOIN users ON users.id = songs.artist
+      WHERE 
+        songs.artist = $1`,
+      values: [artistId],
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async getSinglesByArtist(artistId) {
+    const query = {
+      text: `SELECT 
+        songs.id, 
+        songs.title, 
+        albums.name as album, 
+        songs.year, 
+        users.fullname as artist, 
+        songs.artist as artist_id, 
+        genres.name as genre, 
+        songs.genre as genre_id, 
+        songs.duration, 
+        songs.audio, 
+        songs.cover 
+      FROM 
+        songs 
+        LEFT JOIN albums ON albums.id = songs.album_id 
+        LEFT JOIN genres ON genres.id = songs.genre 
+        LEFT JOIN users ON users.id = songs.artist 
+      WHERE 
+        songs.artist = $1 AND songs.album_id IS NULL`,
+      values: [artistId],
     };
 
     const result = await this._pool.query(query);
@@ -169,6 +274,17 @@ class SongsService {
     if (!result.rows.length) {
       throw new NotFoundError('Lagu gagal dihapus. Id tidak ditemukan');
     }
+  }
+
+  async addCoverToSong(id, fileLocation) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE songs SET cover = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
   }
 
   async verifySongArtist(id, artist) {
@@ -224,7 +340,7 @@ class SongsService {
 
   async getSongsByPlaylist(id) {
     const query = {
-      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio
+      text: `SELECT songs.id, songs.title, users.fullname as artist, songs.audio, songs.cover
       FROM songs
       LEFT JOIN playlist_songs ON playlist_songs.song_id = songs.id
       LEFT JOIN users ON users.id = songs.artist

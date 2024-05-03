@@ -25,6 +25,22 @@ const routes = (handler) => [
     handler: handler.getPopularAlbumsHandler,
   },
   {
+    method: 'GET',
+    path: '/albums/liked',
+    handler: handler.getLikedAlbumsHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/albums/me',
+    handler: handler.getOwnedAlbumsHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
     method: 'PUT',
     path: '/albums/{id}',
     handler: handler.putAlbumByIdHandler,

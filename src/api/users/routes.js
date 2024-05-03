@@ -8,6 +8,11 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
+    path: '/users/popular',
+    handler: handler.getPopularUsersHandler,
+  },
+  {
+    method: 'GET',
     path: '/users/me',
     handler: handler.getLoggedUserHandler,
     options: {

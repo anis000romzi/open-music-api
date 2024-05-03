@@ -30,6 +30,7 @@ class PlaylistsHandler {
   async getPlaylistsHandler(request) {
     const { id: credentialId } = request.auth.credentials;
     const playlists = await this._playlistsService.getPlaylists(credentialId);
+
     const mappedPlaylists = await Promise.all(playlists.map(async (playlist) => {
       const songs = await this._songsService.getSongsByPlaylist(playlist.id);
       const mappedSongs = songs.map((song) => song.id);
@@ -102,6 +103,15 @@ class PlaylistsHandler {
     const { id, name, username } = await this._playlistsService.getPlaylistById(playlistId);
     const songs = await this._songsService.getSongsByPlaylist(playlistId);
 
+    const mappedSongs = await Promise.all(songs.map(async (song) => {
+      const likes = await this._songsService.getSongLikes(song.id);
+      const mappedLikes = likes.result.map((like) => like.id);
+      return {
+        ...song,
+        likes: mappedLikes,
+      };
+    }));
+
     return {
       status: 'success',
       data: {
@@ -109,7 +119,7 @@ class PlaylistsHandler {
           id,
           name,
           username,
-          songs,
+          songs: mappedSongs,
         },
       },
     };

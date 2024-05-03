@@ -4,12 +4,14 @@ class UsersHandler {
   constructor(
     usersService,
     albumsService,
+    songsService,
     storageService,
     uploadsValidator,
     usersValidator,
   ) {
     this._usersService = usersService;
     this._albumsService = albumsService;
+    this._songsService = songsService;
     this._storageService = storageService;
     this._usersValidator = usersValidator;
     this._uploadsValidator = uploadsValidator;
@@ -17,10 +19,8 @@ class UsersHandler {
     autoBind(this);
   }
 
-  async getLoggedUserHandler(request) {
-    const { id: credentialId } = request.auth.credentials;
-
-    const users = await this._usersService.getUserById(credentialId);
+  async getPopularUsersHandler() {
+    const users = await this._usersService.getPopularUsers();
 
     return {
       status: 'success',
@@ -30,23 +30,35 @@ class UsersHandler {
     };
   }
 
+  async getLoggedUserHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+
+    const users = await this._usersService.getUserById(credentialId);
+    const albums = await this._albumsService.getAlbumsByArtist(credentialId);
+    const songs = await this._songsService.getSongsByArtist(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        users: {
+          ...users,
+          albums: albums.length,
+          songs: songs.length,
+        },
+      },
+    };
+  }
+
   async getUserByIdHandler(request) {
     const { id: userId } = request.params;
 
-    const {
-      id, email, username, fullname, description, picture,
-    } = await this._usersService.getUserById(userId);
+    const user = await this._usersService.getUserById(userId);
     const albums = await this._albumsService.getAlbumsByArtist(userId);
 
     return {
       status: 'success',
       data: {
-        id,
-        email,
-        username,
-        fullname,
-        description,
-        picture,
+        ...user,
         albums,
       },
     };

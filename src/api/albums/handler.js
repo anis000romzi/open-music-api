@@ -34,7 +34,19 @@ class AlbumsHandler {
       id: albumId, name, year, artist_id: artistId, artist, cover: coverUrl,
     } = await this._albumsService.getAlbumById(id);
 
+    const albumLikes = await this._albumsService.getAlbumLikes(id);
+    const mappedAlbumLikes = albumLikes.result.map((like) => like.id);
+
     const songs = await this._songsService.getSongsByAlbum(id);
+    const mappedSongs = await Promise.all(songs.map(async (song) => {
+      const likes = await this._songsService.getSongLikes(song.id);
+      const mappedLikes = likes.result.map((like) => like.id);
+
+      return {
+        ...song,
+        likes: mappedLikes,
+      };
+    }));
 
     return {
       status: 'success',
@@ -46,7 +58,8 @@ class AlbumsHandler {
           artistId,
           artist,
           coverUrl,
-          songs,
+          likes: mappedAlbumLikes,
+          songs: mappedSongs,
         },
       },
     };
@@ -55,6 +68,30 @@ class AlbumsHandler {
   async getAlbumsByArtistHandler(request) {
     const { id } = request.params;
     const albums = await this._albumsService.getAlbumsByArtist(id);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getOwnedAlbumsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const albums = await this._albumsService.getAlbumsByArtist(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getLikedAlbumsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const albums = await this._albumsService.getLikedAlbums(credentialId);
 
     return {
       status: 'success',
