@@ -217,15 +217,14 @@ class SongsHandler {
     await this._songsService.verifySongArtist(id, credentialId);
 
     const filename = await this._audioStorageService.writeFile(audio, audio.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/audio/${filename}`;
 
-    await this._songsService.addAudioToSong(id, fileLocation);
+    await this._songsService.addAudioToSong(id, filename);
 
     const response = h.response({
       status: 'success',
       message: 'Audio berhasil diunggah',
       data: {
-        fileLocation,
+        fileLocation: filename,
       },
     });
 
@@ -243,15 +242,14 @@ class SongsHandler {
     await this._songsService.verifySongArtist(id, credentialId);
 
     const filename = await this._coverStorageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/cover/${filename}`;
 
-    await this._songsService.addCoverToSong(id, fileLocation);
+    await this._songsService.addCoverToSong(id, filename);
 
     const response = h.response({
       status: 'success',
       message: 'Sampul berhasil diunggah',
       data: {
-        fileLocation,
+        fileLocation: filename,
       },
     });
 

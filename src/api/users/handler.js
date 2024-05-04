@@ -198,15 +198,14 @@ class UsersHandler {
     await this._usersService.verifyLoggedUser(id, credentialId);
 
     const filename = await this._storageService.writeFile(picture, picture.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/users/picture/${filename}`;
 
-    await this._usersService.addProfilePicture(id, fileLocation);
+    await this._usersService.addProfilePicture(id, filename);
 
     const response = h.response({
       status: 'success',
       message: 'Foto profile berhasil diunggah',
       data: {
-        fileLocation,
+        fileLocation: filename,
       },
     });
 

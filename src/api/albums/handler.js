@@ -195,15 +195,14 @@ class AlbumsHandler {
     await this._albumsService.verifyAlbumArtist(id, credentialId);
 
     const filename = await this._storageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
 
-    await this._albumsService.addCoverToAlbum(id, fileLocation);
+    await this._albumsService.addCoverToAlbum(id, filename);
 
     const response = h.response({
       status: 'success',
       message: 'Sampul berhasil diunggah',
       data: {
-        fileLocation,
+        fileLocation: filename,
       },
     });
 
