@@ -223,8 +223,7 @@ class UsersHandler {
     await this._usersService.getUserById(id);
     await this._usersService.verifyLoggedUser(id, credentialId);
 
-    const filename = await this._storageService.writeFile(picture, picture.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/users/picture/${filename}`;
+    const fileLocation = await this._storageService.writeFile(picture, picture.hapi);
 
     await this._usersService.addProfilePicture(id, fileLocation);
 

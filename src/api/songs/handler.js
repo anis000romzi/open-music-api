@@ -216,8 +216,7 @@ class SongsHandler {
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
 
-    const filename = await this._audioStorageService.writeFile(audio, audio.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/audio/${filename}`;
+    const fileLocation = await this._audioStorageService.writeFile(audio, audio.hapi);
 
     await this._songsService.addAudioToSong(id, fileLocation);
 
@@ -242,8 +241,7 @@ class SongsHandler {
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
 
-    const filename = await this._coverStorageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/songs/cover/${filename}`;
+    const fileLocation = await this._coverStorageService.writeFile(cover, cover.hapi);
 
     await this._songsService.addCoverToSong(id, fileLocation);
 

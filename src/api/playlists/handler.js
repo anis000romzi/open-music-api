@@ -93,8 +93,7 @@ class PlaylistsHandler {
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
 
-    const filename = await this._coverStorageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/playlists/cover/${filename}`;
+    const fileLocation = await this._coverStorageService.writeFile(cover, cover.hapi);
 
     await this._playlistsService.addCoverToPlaylist(id, fileLocation);
 

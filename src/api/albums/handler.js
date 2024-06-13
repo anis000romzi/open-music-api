@@ -206,8 +206,7 @@ class AlbumsHandler {
     await this._albumsService.getAlbumById(id);
     await this._albumsService.verifyAlbumArtist(id, credentialId);
 
-    const filename = await this._storageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
+    const fileLocation = await this._storageService.writeFile(cover, cover.hapi);
 
     await this._albumsService.addCoverToAlbum(id, fileLocation);
 

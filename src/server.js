@@ -3,7 +3,6 @@ require('dotenv').config();
 const Hapi = require('@hapi/hapi');
 const Jwt = require('@hapi/jwt');
 const Inert = require('@hapi/inert');
-const path = require('path');
 const ClientError = require('./exceptions/ClientError');
 
 // albums
@@ -48,7 +47,7 @@ const ActivitiesService = require('./services/postgres/ActivitiesService');
 const ProducerService = require('./services/rabbitmq/ProducerService');
 
 // uploads
-const StorageService = require('./services/storage/StorageService');
+const StorageService = require('./services/S3/StorageService');
 const UploadsValidator = require('./validator/uploads');
 
 // cache
@@ -64,11 +63,11 @@ const init = async () => {
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
-  const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
-  const audioStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/audio'));
-  const songCoverStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/cover'));
-  const playlistCoverStorageService = new StorageService(path.resolve(__dirname, 'api/playlists/file/cover'));
-  const pictureStorageService = new StorageService(path.resolve(__dirname, 'api/users/file/picture'));
+  const coverStorageService = new StorageService();
+  const audioStorageService = new StorageService();
+  const songCoverStorageService = new StorageService();
+  const playlistCoverStorageService = new StorageService();
+  const pictureStorageService = new StorageService();
 
   const server = Hapi.server({
     port: process.env.PORT,
