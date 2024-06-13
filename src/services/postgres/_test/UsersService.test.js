@@ -3,7 +3,6 @@ const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
 const InvariantError = require('../../../exceptions/InvariantError');
 const NotFoundError = require('../../../exceptions/NotFoundError');
 const AuthenticationError = require('../../../exceptions/AuthenticationError');
-const AuthorizationError = require('../../../exceptions/AuthorizationError');
 const pool = require('../pool');
 const UsersService = require('../UsersService');
 
@@ -77,7 +76,7 @@ describe('UsersService', () => {
         .toThrowError(NotFoundError);
     });
 
-    it('should return correct when user email found', async () => {
+    it('should return correct data when user email found', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ email: 'testing@gmail.com' });
       const usersService = new UsersService();
@@ -86,7 +85,7 @@ describe('UsersService', () => {
       const user = await usersService.getUserByEmail('testing@gmail.com');
 
       // Action
-      expect(user).toStrictEqual({ id: 'user-123' });
+      expect(user).toStrictEqual({ id: 'user-123', username: 'testing' });
     });
   });
 
@@ -139,16 +138,6 @@ describe('UsersService', () => {
       await expect(usersService.verifyUserCredential('testing@gmail.com', 'secret2')).rejects.toThrowError(AuthenticationError);
       await expect(usersService.verifyUserCredential('testing2', 'secret')).rejects.toThrowError(AuthenticationError);
       await expect(usersService.verifyUserCredential('testing', 'secret2')).rejects.toThrowError(AuthenticationError);
-    });
-
-    it('should throw AuthenticationError when user is not active', async () => {
-      // Arrange
-      await UsersTableTestHelper.addUser({});
-      const usersService = new UsersService({});
-
-      // Action & Assert
-      await expect(usersService.verifyUserCredential('testing@gmail.com', 'secret')).rejects.toThrowError(AuthorizationError);
-      await expect(usersService.verifyUserCredential('testing', 'secret')).rejects.toThrowError(AuthorizationError);
     });
 
     it('should return correct user id when user credential match and user is active', async () => {

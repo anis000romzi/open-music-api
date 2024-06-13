@@ -1,17 +1,26 @@
 const autoBind = require('auto-bind');
 
 class PlaylistsHandler {
-  constructor(playlistsService, songsService, activitiesService, validator) {
+  constructor(
+    playlistsService,
+    songsService,
+    activitiesService,
+    coverStorageService,
+    playlistsValidator,
+    uploadsValidator,
+  ) {
     this._playlistsService = playlistsService;
     this._songsService = songsService;
     this._activitiesService = activitiesService;
-    this._validator = validator;
+    this._coverStorageService = coverStorageService;
+    this._playlistsValidator = playlistsValidator;
+    this._uploadsValidator = uploadsValidator;
 
     autoBind(this);
   }
 
   async postPlaylistHandler(request, h) {
-    this._validator.validatePostPlaylistPayload(request.payload);
+    this._playlistsValidator.validatePostPlaylistPayload(request.payload);
     const { name } = request.payload;
     const { id: credentialId } = request.auth.credentials;
 
@@ -49,7 +58,7 @@ class PlaylistsHandler {
   }
 
   async putPlaylistByIdHandler(request) {
-    this._validator.validatePostPlaylistPayload(request.payload);
+    this._playlistsValidator.validatePostPlaylistPayload(request.payload);
     const { name } = request.payload;
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
@@ -76,8 +85,33 @@ class PlaylistsHandler {
     };
   }
 
+  async postUploadCoverHandler(request, h) {
+    const { id } = request.params;
+    const { cover } = request.payload;
+    const { id: credentialId } = request.auth.credentials;
+    this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
+
+    await this._playlistsService.verifyPlaylistOwner(id, credentialId);
+
+    const filename = await this._coverStorageService.writeFile(cover, cover.hapi);
+    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/playlists/cover/${filename}`;
+
+    await this._playlistsService.addCoverToPlaylist(id, fileLocation);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Sampul berhasil diunggah',
+      data: {
+        fileLocation,
+      },
+    });
+
+    response.code(201);
+    return response;
+  }
+
   async postSongToPlaylistHandler(request, h) {
-    this._validator.validatePostSongToPlaylistPayload(request.payload);
+    this._playlistsValidator.validatePostSongToPlaylistPayload(request.payload);
     const { id } = request.params;
     const { songId } = request.payload;
     const { id: credentialId } = request.auth.credentials;
@@ -100,7 +134,13 @@ class PlaylistsHandler {
     const { id: credentialId } = request.auth.credentials;
 
     await this._playlistsService.verifyPlaylistAccess(playlistId, credentialId);
-    const { id, name, username } = await this._playlistsService.getPlaylistById(playlistId);
+    const {
+      id,
+      name,
+      username,
+      cover,
+    } = await this._playlistsService.getPlaylistById(playlistId);
+    const collaborators = await this._playlistsService.getPlaylistCollaborators(playlistId);
     const songs = await this._songsService.getSongsByPlaylist(playlistId);
 
     const mappedSongs = await Promise.all(songs.map(async (song) => {
@@ -119,6 +159,8 @@ class PlaylistsHandler {
           id,
           name,
           username,
+          cover,
+          collaborators,
           songs: mappedSongs,
         },
       },
@@ -126,7 +168,7 @@ class PlaylistsHandler {
   }
 
   async deleteSongFromPlaylistHandler(request) {
-    this._validator.validateDeleteSongFromPlaylistPayload(request.payload);
+    this._playlistsValidator.validateDeleteSongFromPlaylistPayload(request.payload);
     const { id } = request.params;
     const { songId } = request.payload;
     const { id: credentialId } = request.auth.credentials;

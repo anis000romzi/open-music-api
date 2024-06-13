@@ -58,8 +58,9 @@ describe('AlbumsService', () => {
         id: 'album-123',
         name: 'Album Testing',
         year: 2022,
-        username: 'testing',
         cover: null,
+        artist: 'Testing testing',
+        artist_id: 'user-123',
       });
     });
   });

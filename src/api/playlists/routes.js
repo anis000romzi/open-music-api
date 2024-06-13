@@ -1,3 +1,5 @@
+const path = require('path');
+
 const routes = (handler) => [
   {
     method: 'POST',
@@ -41,6 +43,20 @@ const routes = (handler) => [
   },
   {
     method: 'POST',
+    path: '/playlists/{id}/covers',
+    handler: handler.postUploadCoverHandler,
+    options: {
+      auth: 'openmusic_jwt',
+      payload: {
+        allow: 'multipart/form-data',
+        multipart: true,
+        output: 'stream',
+        maxBytes: 512000,
+      },
+    },
+  },
+  {
+    method: 'POST',
     path: '/playlists/{id}/songs',
     handler: handler.postSongToPlaylistHandler,
     options: {
@@ -61,6 +77,15 @@ const routes = (handler) => [
     handler: handler.getPlaylistActivitiesHandler,
     options: {
       auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/playlists/{param*}',
+    handler: {
+      directory: {
+        path: path.resolve(__dirname, 'file'),
+      },
     },
   },
 ];

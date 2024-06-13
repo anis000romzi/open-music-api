@@ -47,7 +47,7 @@ class PlaylistsService {
 
   async getPlaylists(owner) {
     const query = {
-      text: `SELECT playlists.id, playlists.name, users.username
+      text: `SELECT playlists.*, users.username
       FROM playlists
       LEFT JOIN users ON users.id = playlists.owner
       LEFT JOIN collaborations ON collaborations.playlist_id = playlists.id
@@ -77,6 +77,19 @@ class PlaylistsService {
     return result.rows[0];
   }
 
+  async getPlaylistCollaborators(id) {
+    const query = {
+      text: `SELECT users.id, users.username FROM users
+      LEFT JOIN collaborations ON collaborations.user_id = users.id
+      WHERE collaborations.playlist_id = $1`,
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
   async deletePlaylistById(id) {
     const query = {
       text: 'DELETE FROM playlists WHERE id = $1 RETURNING id',
@@ -88,6 +101,17 @@ class PlaylistsService {
     if (!result.rows.length) {
       throw new NotFoundError('Playlist gagal dihapus. Id tidak ditemukan');
     }
+  }
+
+  async addCoverToPlaylist(id, fileLocation) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE playlists SET cover = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
   }
 
   async verifyPlaylistOwner(id, owner) {

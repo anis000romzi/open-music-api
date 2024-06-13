@@ -30,6 +30,45 @@ class AlbumsService {
     return result.rows[0].id;
   }
 
+  async getAlbums(name, artist) {
+    let query = {
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist`,
+    };
+
+    if (name !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE albums.name ILIKE '%' || $1 || '%'`,
+        values: [name],
+      };
+    }
+    if (artist !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE users.fullname ILIKE '%' || $1 || '%'`,
+        values: [artist],
+      };
+    }
+    if (name !== undefined && artist !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%'`,
+        values: [name, artist],
+      };
+    }
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
   async getAlbumById(albumId) {
     const query = {
       text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover

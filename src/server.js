@@ -3,6 +3,7 @@ require('dotenv').config();
 const Hapi = require('@hapi/hapi');
 const Jwt = require('@hapi/jwt');
 const Inert = require('@hapi/inert');
+const path = require('path');
 const ClientError = require('./exceptions/ClientError');
 
 // albums
@@ -47,7 +48,7 @@ const ActivitiesService = require('./services/postgres/ActivitiesService');
 const ProducerService = require('./services/rabbitmq/ProducerService');
 
 // uploads
-const StorageService = require('./services/S3/StorageService');
+const StorageService = require('./services/storage/StorageService');
 const UploadsValidator = require('./validator/uploads');
 
 // cache
@@ -63,10 +64,11 @@ const init = async () => {
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
-  const coverStorageService = new StorageService();
-  const audioStorageService = new StorageService();
-  const songCoverStorageService = new StorageService();
-  const pictureStorageService = new StorageService();
+  const coverStorageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
+  const audioStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/audio'));
+  const songCoverStorageService = new StorageService(path.resolve(__dirname, 'api/songs/file/cover'));
+  const playlistCoverStorageService = new StorageService(path.resolve(__dirname, 'api/playlists/file/cover'));
+  const pictureStorageService = new StorageService(path.resolve(__dirname, 'api/users/file/picture'));
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -95,12 +97,20 @@ const init = async () => {
       sub: false,
       maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
-    validate: (artifacts) => ({
-      isValid: true,
-      credentials: {
-        id: artifacts.decoded.payload.id,
-      },
-    }),
+    validate: async (artifacts) => {
+      const user = await usersService.getUserById(artifacts.decoded.payload.id);
+
+      if (!user || !user.is_active) {
+        return { isValid: false };
+      }
+
+      return {
+        isValid: true,
+        credentials: {
+          id: artifacts.decoded.payload.id,
+        },
+      };
+    },
   });
 
   await server.register([
@@ -130,7 +140,9 @@ const init = async () => {
         playlistsService,
         songsService,
         activitiesService,
-        validator: PlaylistsValidator,
+        coverStorageService: playlistCoverStorageService,
+        playlistsValidator: PlaylistsValidator,
+        uploadsValidator: UploadsValidator,
       },
     },
     {

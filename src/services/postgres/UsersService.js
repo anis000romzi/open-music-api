@@ -49,6 +49,41 @@ class UsersService {
     return result.rows[0].id;
   }
 
+  async getUsers(fullname, username) {
+    let query = {
+      text: `SELECT id, email, username, fullname, description, picture
+      FROM users`,
+    };
+
+    if (fullname !== undefined) {
+      query = {
+        text: `SELECT id, email, username, fullname, description, picture
+        FROM users
+        WHERE fullname ILIKE '%' || $1 || '%'`,
+        values: [fullname],
+      };
+    }
+    if (username !== undefined) {
+      query = {
+        text: `SELECT id, email, username, fullname, description, picture
+        FROM users
+        WHERE username ILIKE '%' || $1 || '%'`,
+        values: [username],
+      };
+    }
+    if (fullname !== undefined && username !== undefined) {
+      query = {
+        text: `SELECT id, email, username, fullname, description, picture
+        FROM users
+        WHERE fullname ILIKE '%' || $1 || '%' OR username ILIKE '%' || $2 || '%'`,
+        values: [fullname, username],
+      };
+    }
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
   async getPopularUsers() {
     const query = {
       text: `SELECT users.id, users.email, users.username, users.fullname, users.description, users.picture, COUNT(DISTINCT follower_artist.user_id) AS followers
@@ -56,6 +91,19 @@ class UsersService {
       LEFT JOIN follower_artist ON follower_artist.artist_id = users.id
       GROUP BY users.id, users.email, users.username, users.fullname, users.description, users.picture
       ORDER BY followers DESC LIMIT 20`,
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async getFollowedUsers(userId) {
+    const query = {
+      text: `SELECT users.id, users.email, users.username, users.fullname, users.description, users.picture
+      FROM users
+      LEFT JOIN follower_artist ON follower_artist.artist_id = users.id
+      WHERE follower_artist.user_id = $1`,
+      values: [userId],
     };
 
     const result = await this._pool.query(query);

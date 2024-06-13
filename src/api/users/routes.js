@@ -2,6 +2,11 @@ const path = require('path');
 
 const routes = (handler) => [
   {
+    method: 'GET',
+    path: '/users',
+    handler: handler.getUsersHandler,
+  },
+  {
     method: 'POST',
     path: '/users',
     handler: handler.postUserHandler,
@@ -15,6 +20,14 @@ const routes = (handler) => [
     method: 'GET',
     path: '/users/me',
     handler: handler.getLoggedUserHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
+  },
+  {
+    method: 'GET',
+    path: '/users/followed',
+    handler: handler.getFollowedUsersHandler,
     options: {
       auth: 'openmusic_jwt',
     },

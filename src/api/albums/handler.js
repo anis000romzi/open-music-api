@@ -28,6 +28,18 @@ class AlbumsHandler {
     return response;
   }
 
+  async getAlbumsHandler(request) {
+    const { name, artist } = request.query;
+    const albums = await this._albumsService.getAlbums(name, artist);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
   async getAlbumByIdHandler(request) {
     const { id } = request.params;
     const {
@@ -195,14 +207,15 @@ class AlbumsHandler {
     await this._albumsService.verifyAlbumArtist(id, credentialId);
 
     const filename = await this._storageService.writeFile(cover, cover.hapi);
+    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
 
-    await this._albumsService.addCoverToAlbum(id, filename);
+    await this._albumsService.addCoverToAlbum(id, fileLocation);
 
     const response = h.response({
       status: 'success',
       message: 'Sampul berhasil diunggah',
       data: {
-        fileLocation: filename,
+        fileLocation,
       },
     });
 

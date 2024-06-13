@@ -19,6 +19,18 @@ class UsersHandler {
     autoBind(this);
   }
 
+  async getUsersHandler(request) {
+    const { fullname, username } = request.query;
+    const users = await this._usersService.getUsers(fullname, username);
+
+    return {
+      status: 'success',
+      data: {
+        users,
+      },
+    };
+  }
+
   async getPopularUsersHandler() {
     const users = await this._usersService.getPopularUsers();
 
@@ -34,16 +46,12 @@ class UsersHandler {
     const { id: credentialId } = request.auth.credentials;
 
     const users = await this._usersService.getUserById(credentialId);
-    const albums = await this._albumsService.getAlbumsByArtist(credentialId);
-    const songs = await this._songsService.getSongsByArtist(credentialId);
 
     return {
       status: 'success',
       data: {
         users: {
           ...users,
-          albums: albums.length,
-          songs: songs.length,
         },
       },
     };
@@ -53,13 +61,31 @@ class UsersHandler {
     const { id: userId } = request.params;
 
     const user = await this._usersService.getUserById(userId);
+    const followers = await this._usersService.getArtistFollower(userId);
+    const mappedFollowers = followers.result.map((like) => like.id);
+
     const albums = await this._albumsService.getAlbumsByArtist(userId);
+    const singles = await this._songsService.getSinglesByArtist(userId);
 
     return {
       status: 'success',
       data: {
         ...user,
+        followers: mappedFollowers,
         albums,
+        singles,
+      },
+    };
+  }
+
+  async getFollowedUsersHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const users = await this._usersService.getFollowedUsers(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        users,
       },
     };
   }
@@ -198,14 +224,15 @@ class UsersHandler {
     await this._usersService.verifyLoggedUser(id, credentialId);
 
     const filename = await this._storageService.writeFile(picture, picture.hapi);
+    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/users/picture/${filename}`;
 
-    await this._usersService.addProfilePicture(id, filename);
+    await this._usersService.addProfilePicture(id, fileLocation);
 
     const response = h.response({
       status: 'success',
       message: 'Foto profile berhasil diunggah',
       data: {
-        fileLocation: filename,
+        fileLocation,
       },
     });
 
