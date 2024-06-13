@@ -21,7 +21,7 @@ const routes = (handler) => [
     path: '/users/me',
     handler: handler.getLoggedUserHandler,
     options: {
-      auth: 'openmusic_jwt',
+      auth: 'openmusic_jwt_2',
     },
   },
   {
