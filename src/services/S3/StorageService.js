@@ -1,4 +1,6 @@
-const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const {
+  S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand,
+} = require('@aws-sdk/client-s3');
 const {
   getSignedUrl,
 } = require('@aws-sdk/s3-request-presigner');
@@ -24,10 +26,16 @@ class StorageService {
 
     await this._S3.send(parameter);
 
-    return this.createPreSignedUrl({
-      bucket: process.env.AWS_BUCKET_NAME,
-      key: meta.filename,
+    return `${process.env.AWS_CLOUDFRONT_NAME}/${meta.filename}`;
+  }
+
+  async deleteFile(meta) {
+    const parameter = new DeleteObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: meta.filename,
     });
+
+    await this._S3.send(parameter);
   }
 
   createPreSignedUrl({ bucket, key }) {
