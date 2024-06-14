@@ -1,6 +1,5 @@
 const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
-const { getAudioDurationInSeconds } = require('get-audio-duration');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
@@ -119,11 +118,9 @@ class SongsService {
   async addAudioToSong(id, fileLocation) {
     const updatedAt = new Date().toISOString();
 
-    const newDuration = await getAudioDurationInSeconds(fileLocation);
-
     const query = {
-      text: 'UPDATE songs SET duration = $1, audio = $2, updated_at = $3 WHERE id = $4',
-      values: [Math.floor(newDuration), fileLocation, updatedAt, id],
+      text: 'UPDATE songs SET audio = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
     };
 
     await this._pool.query(query);
