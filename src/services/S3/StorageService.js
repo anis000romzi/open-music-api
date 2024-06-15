@@ -17,16 +17,17 @@ class StorageService {
   }
 
   async writeFile(file, meta) {
+    const newKey = +new Date() + meta.filename;
     const parameter = new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: meta.filename,
+      Key: newKey,
       Body: file._data,
       ContentType: meta.headers['content-type'],
     });
 
     await this._S3.send(parameter);
 
-    return `${process.env.AWS_CLOUDFRONT_NAME}/${meta.filename}`;
+    return `${process.env.AWS_CLOUDFRONT_NAME}/${newKey}`;
   }
 
   async deleteFile(meta) {

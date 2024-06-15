@@ -10,15 +10,15 @@ class PlaylistsService {
     this._collaborationService = collaborationService;
   }
 
-  async addPlaylist(name, owner) {
+  async addPlaylist({ name, owner, isPublic }) {
     const id = `playlist-${nanoid(16)}`;
 
     const createdAt = new Date().toISOString();
     const updatedAt = createdAt;
 
     const query = {
-      text: 'INSERT INTO playlists VALUES($1, $2, $3, $4, $5) RETURNING id',
-      values: [id, name, owner, createdAt, updatedAt],
+      text: 'INSERT INTO playlists VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      values: [id, name, owner, createdAt, updatedAt, null, isPublic],
     };
 
     const result = await this._pool.query(query);
@@ -30,12 +30,12 @@ class PlaylistsService {
     return result.rows[0].id;
   }
 
-  async editPlaylistById(id, name) {
+  async editPlaylistById({ id, name, isPublic }) {
     const updatedAt = new Date().toISOString();
 
     const query = {
-      text: 'UPDATE playlists SET name = $1, updated_at = $2 WHERE id = $3 RETURNING id',
-      values: [name, updatedAt, id],
+      text: 'UPDATE playlists SET name = $1, updated_at = $2, is_public = $3 WHERE id = $4 RETURNING id',
+      values: [name, updatedAt, isPublic, id],
     };
 
     const result = await this._pool.query(query);
@@ -60,9 +60,23 @@ class PlaylistsService {
     return result.rows;
   }
 
-  async getPlaylistById(id) {
+  async getPopularPlaylists() {
     const query = {
       text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      WHERE playlists.is_public = $1
+      GROUP BY playlists.id, users.username`,
+      values: [true],
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async getPlaylistById(id) {
+    const query = {
+      text: `SELECT playlists.*, users.username, users.id as owner_id
       FROM playlists
       LEFT JOIN users ON users.id = playlists.owner
       WHERE playlists.id = $1`,
@@ -112,6 +126,83 @@ class PlaylistsService {
     };
 
     await this._pool.query(query);
+  }
+
+  async addLikeToPlaylist(userId, playlistId) {
+    const likeData = await this.verifyPlaylistLikes(userId, playlistId);
+
+    if (likeData.rows.length) {
+      throw new InvariantError('Gagal menambahkan like ke playlist');
+    }
+
+    const id = `like_playlist-${nanoid(16)}`;
+
+    const query = {
+      text: 'INSERT INTO user_playlist_likes VALUES($1, $2, $3)',
+      values: [id, userId, playlistId],
+    };
+
+    await this._pool.query(query);
+  }
+
+  async deleteLikeFromPlaylist(userId, playlistId) {
+    const query = {
+      text: 'DELETE FROM user_playlist_likes WHERE user_id = $1 AND playlist_id = $2 RETURNING id',
+      values: [userId, playlistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new InvariantError('Gagal menghapus like dari playlist');
+    }
+  }
+
+  async getPlaylistLikes(id) {
+    const query = {
+      text: `SELECT users.id FROM users
+      LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
+      WHERE user_playlist_likes.playlist_id = $1`,
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return {
+      result: result.rows,
+    };
+  }
+
+  async verifyPlaylistLikes(userId, playlistId) {
+    const query = {
+      text: 'SELECT id FROM user_playlist_likes WHERE user_id = $1 AND playlist_id = $2',
+      values: [userId, playlistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result;
+  }
+
+  async verifyPlaylistVisibility(playlistId, type = 'private') {
+    const query = {
+      text: 'SELECT is_public FROM playlists WHERE id = $1',
+      values: [playlistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (type === 'public') {
+      if (!result.rows[0].is_public) {
+        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      }
+    }
+
+    if (type === 'private') {
+      if (result.rows[0].is_public) {
+        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      }
+    }
   }
 
   async verifyPlaylistOwner(id, owner) {

@@ -34,7 +34,7 @@ class AlbumsService {
     let query = {
       text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
       FROM albums
-      LEFT JOIN users ON users.id = albums.artist`,
+      LEFT JOIN users ON users.id = albums.artist LIMIT 20`,
     };
 
     if (name !== undefined) {
@@ -42,7 +42,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE albums.name ILIKE '%' || $1 || '%'`,
+        WHERE albums.name ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [name],
       };
     }
@@ -51,7 +51,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE users.fullname ILIKE '%' || $1 || '%'`,
+        WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [artist],
       };
     }
@@ -60,7 +60,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%'`,
+        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
         values: [name, artist],
       };
     }

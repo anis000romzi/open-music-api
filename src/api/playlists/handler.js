@@ -21,10 +21,10 @@ class PlaylistsHandler {
 
   async postPlaylistHandler(request, h) {
     this._playlistsValidator.validatePostPlaylistPayload(request.payload);
-    const { name } = request.payload;
-    const { id: credentialId } = request.auth.credentials;
+    const { name, isPublic } = request.payload;
+    const { id: owner } = request.auth.credentials;
 
-    const playlistId = await this._playlistsService.addPlaylist(name, credentialId);
+    const playlistId = await this._playlistsService.addPlaylist({ name, owner, isPublic });
 
     const response = h.response({
       status: 'success',
@@ -57,14 +57,34 @@ class PlaylistsHandler {
     };
   }
 
+  async getPopularPlaylistsHandler() {
+    const playlists = await this._playlistsService.getPopularPlaylists();
+
+    const mappedPlaylists = await Promise.all(playlists.map(async (playlist) => {
+      const songs = await this._songsService.getSongsByPlaylist(playlist.id);
+      const mappedSongs = songs.map((song) => song.id);
+      return {
+        ...playlist,
+        songs: mappedSongs,
+      };
+    }));
+
+    return {
+      status: 'success',
+      data: {
+        playlists: mappedPlaylists,
+      },
+    };
+  }
+
   async putPlaylistByIdHandler(request) {
     this._playlistsValidator.validatePostPlaylistPayload(request.payload);
-    const { name } = request.payload;
+    const { name, isPublic } = request.payload;
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
-    await this._playlistsService.editPlaylistById(id, name);
+    await this._playlistsService.editPlaylistById({ id, name, isPublic });
 
     return {
       status: 'success',
@@ -132,13 +152,19 @@ class PlaylistsHandler {
     const { id: playlistId } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
-    await this._playlistsService.verifyPlaylistAccess(playlistId, credentialId);
     const {
       id,
       name,
       username,
+      owner_id: ownerId,
       cover,
+      is_public: isPublic,
     } = await this._playlistsService.getPlaylistById(playlistId);
+
+    if (!isPublic) {
+      await this._playlistsService.verifyPlaylistAccess(playlistId, credentialId);
+    }
+
     const collaborators = await this._playlistsService.getPlaylistCollaborators(playlistId);
     const songs = await this._songsService.getSongsByPlaylist(playlistId);
 
@@ -158,12 +184,59 @@ class PlaylistsHandler {
           id,
           name,
           username,
+          ownerId,
           cover,
+          is_public: isPublic,
           collaborators,
           songs: mappedSongs,
         },
       },
     };
+  }
+
+  async postPlaylistLikeHandler(request, h) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._playlistsService.getPlaylistById(id);
+    await this._playlistsService.verifyPlaylistVisibility(id, 'public');
+    await this._playlistsService.addLikeToPlaylist(credentialId, id);
+
+    const response = h.response({
+      status: 'success',
+      message: 'Like berhasil ditambahkan ke playlist',
+    });
+
+    response.code(201);
+    return response;
+  }
+
+  async deletePlaylistLikeHandler(request) {
+    const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
+
+    await this._playlistsService.verifyPlaylistVisibility(id, 'public');
+    await this._playlistsService.deleteLikeFromPlaylist(credentialId, id);
+
+    return {
+      status: 'success',
+      message: 'Like berhasil dihapus dari playlist',
+    };
+  }
+
+  async getPlaylistLikeHandler(request, h) {
+    const { id } = request.params;
+
+    const likes = await this._playlistsService.getPlaylistLikes(id);
+
+    const response = h.response({
+      status: 'success',
+      data: {
+        likes: likes.result.length,
+      },
+    });
+
+    return response;
   }
 
   async deleteSongFromPlaylistHandler(request) {

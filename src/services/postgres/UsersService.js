@@ -52,14 +52,14 @@ class UsersService {
   async getUsers(fullname, username) {
     let query = {
       text: `SELECT id, email, username, fullname, description, picture
-      FROM users`,
+      FROM users LIMIT 20`,
     };
 
     if (fullname !== undefined) {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE fullname ILIKE '%' || $1 || '%'`,
+        WHERE fullname ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [fullname],
       };
     }
@@ -67,7 +67,7 @@ class UsersService {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE username ILIKE '%' || $1 || '%'`,
+        WHERE username ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [username],
       };
     }
@@ -75,7 +75,7 @@ class UsersService {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE fullname ILIKE '%' || $1 || '%' OR username ILIKE '%' || $2 || '%'`,
+        WHERE fullname ILIKE '%' || $1 || '%' OR username ILIKE '%' || $2 || '%' LIMIT 20`,
         values: [fullname, username],
       };
     }
