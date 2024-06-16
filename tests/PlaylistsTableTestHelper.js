@@ -8,8 +8,8 @@ const PlaylistsTableTestHelper = {
     owner = 'user-123',
     isPublic = false,
     cover = null,
-    createdAt = '2024-02-17 04:02:55.751',
-    updatedAt = '2024-02-17 04:02:55.751',
+    createdAt = '2024-02-16T21:02:55.751Z',
+    updatedAt = '2024-02-16T21:02:55.751Z',
   }) {
     const query = {
       text: 'INSERT INTO playlists VALUES($1, $2, $3, $4, $5, $6, $7)',
