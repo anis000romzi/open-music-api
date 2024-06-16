@@ -1,5 +1,5 @@
 exports.up = (pgm) => {
-  pgm.addColumn('albums', {
+  pgm.addColumn('playlists', {
     cover: {
       type: 'TEXT',
     },
@@ -7,5 +7,5 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  pgm.dropColumn('albums', 'cover');
+  pgm.dropColumn('playlists', 'cover');
 };
