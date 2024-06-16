@@ -51,14 +51,14 @@ class UsersService {
   async getUsers(fullname, username) {
     let query = {
       text: `SELECT id, email, username, fullname, description, picture
-      FROM users LIMIT 20`,
+      FROM users WHERE is_active = true LIMIT 20`,
     };
 
     if (fullname !== undefined) {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE fullname ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE fullname ILIKE '%' || $1 || '%' AND is_active = true LIMIT 20`,
         values: [fullname],
       };
     }
@@ -66,7 +66,7 @@ class UsersService {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE username ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE username ILIKE '%' || $1 || '%' AND is_active = true LIMIT 20`,
         values: [username],
       };
     }
@@ -74,7 +74,7 @@ class UsersService {
       query = {
         text: `SELECT id, email, username, fullname, description, picture
         FROM users
-        WHERE fullname ILIKE '%' || $1 || '%' OR username ILIKE '%' || $2 || '%' LIMIT 20`,
+        WHERE fullname ILIKE '%' || $1 || '%' OR username ILIKE '%' || $2 || '%' AND is_active = true LIMIT 20`,
         values: [fullname, username],
       };
     }
@@ -88,6 +88,7 @@ class UsersService {
       text: `SELECT users.id, users.email, users.username, users.fullname, users.description, users.picture, COUNT(DISTINCT follower_artist.user_id) AS followers
       FROM users
       LEFT JOIN follower_artist ON follower_artist.artist_id = users.id
+      WHERE users.is_active = true
       GROUP BY users.id, users.email, users.username, users.fullname, users.description, users.picture
       ORDER BY followers DESC LIMIT 20`,
     };
@@ -101,7 +102,7 @@ class UsersService {
       text: `SELECT users.id, users.email, users.username, users.fullname, users.description, users.picture
       FROM users
       LEFT JOIN follower_artist ON follower_artist.artist_id = users.id
-      WHERE follower_artist.user_id = $1`,
+      WHERE follower_artist.user_id = $1 AND users.is_active = true`,
       values: [userId],
     };
 
