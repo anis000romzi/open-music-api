@@ -21,13 +21,12 @@ class AlbumsService {
       values: [id, name, year, artist, null, createdAt, updatedAt],
     };
 
-    const result = await this._pool.query(query);
-
-    if (!result.rows[0].id) {
+    try {
+      const result = await this._pool.query(query);
+      return result.rows[0].id;
+    } catch (error) {
       throw new InvariantError('Album gagal ditambahkan');
     }
-
-    return result.rows[0].id;
   }
 
   async getAlbums(name, artist) {

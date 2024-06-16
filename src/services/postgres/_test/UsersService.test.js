@@ -16,6 +16,16 @@ describe('UsersService', () => {
   });
 
   describe('addUser function', () => {
+    it('should throw InvariantError when the required input is not complete', async () => {
+      // Arrange
+      const usersService = new UsersService();
+
+      // Action & Assert
+      await expect(usersService.addUser({
+        username: 'testing', password: 'secret', fullname: 'Testing testing',
+      })).rejects.toThrowError(InvariantError);
+    });
+
     it('should persist register user and return registered user correctly', async () => {
       // Arrange
       const usersService = new UsersService();

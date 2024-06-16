@@ -1,12 +1,12 @@
-const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class PlaylistsService {
   constructor(collaborationService) {
-    this._pool = new Pool();
+    this._pool = pool;
     this._collaborationService = collaborationService;
   }
 
@@ -21,13 +21,12 @@ class PlaylistsService {
       values: [id, name, owner, createdAt, updatedAt, null, isPublic],
     };
 
-    const result = await this._pool.query(query);
-
-    if (!result.rows[0].id) {
+    try {
+      const result = await this._pool.query(query);
+      return result.rows[0].id;
+    } catch (error) {
       throw new InvariantError('Playlist gagal dibuat');
     }
-
-    return result.rows[0].id;
   }
 
   async editPlaylistById({ id, name, isPublic }) {
@@ -40,7 +39,7 @@ class PlaylistsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows[0].id) {
+    if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui playlist. Id tidak ditemukan');
     }
   }

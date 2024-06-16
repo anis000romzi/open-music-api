@@ -1,12 +1,12 @@
-const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class SongsService {
   constructor() {
-    this._pool = new Pool();
+    this._pool = pool;
   }
 
   async addSong({
@@ -22,13 +22,12 @@ class SongsService {
       values: [id, title, year, genre, artist, duration, albumId, null, createdAt, updatedAt, null],
     };
 
-    const result = await this._pool.query(query);
-
-    if (!result.rows[0].id) {
+    try {
+      const result = await this._pool.query(query);
+      return result.rows[0].id;
+    } catch (error) {
       throw new InvariantError('Lagu gagal ditambahkan');
     }
-
-    return result.rows[0].id;
   }
 
   async getSongs(title, artist) {

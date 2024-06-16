@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 const AlbumsTableTestHelper = require('../../../../tests/AlbumsTableTestHelper');
 const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
+const InvariantError = require('../../../exceptions/InvariantError');
 const NotFoundError = require('../../../exceptions/NotFoundError');
 const AuthorizationError = require('../../../exceptions/AuthorizationError');
 const pool = require('../pool');
@@ -17,6 +18,15 @@ describe('AlbumsService', () => {
   });
 
   describe('addAlbum function', () => {
+    it('should throw InvariantError when the required input is not complete', async () => {
+      // Arrange
+      await UsersTableTestHelper.addUser({ id: 'user-123' });
+      const albumsService = new AlbumsService();
+
+      // Action & Assert
+      await expect(albumsService.addAlbum({ name: 'Album testing' }, 'user-123')).rejects.toThrowError(InvariantError);
+    });
+
     it('should persist after adding a album', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
@@ -78,7 +88,7 @@ describe('AlbumsService', () => {
         .toThrowError(NotFoundError);
     });
 
-    it('should throw AuthorizationError when album id and user id not match', async () => {
+    it('should throw AuthorizationError when album artist and user id not match', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await AlbumsTableTestHelper.addAlbum({ id: 'album-123' });
