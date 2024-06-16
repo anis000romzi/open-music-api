@@ -3,7 +3,6 @@ require('dotenv').config();
 const Hapi = require('@hapi/hapi');
 const Jwt = require('@hapi/jwt');
 const Inert = require('@hapi/inert');
-const path = require('path');
 const ClientError = require('./exceptions/ClientError');
 
 // albums
@@ -37,16 +36,18 @@ const collaborations = require('./api/collaborations');
 const CollaborationsService = require('./services/postgres/CollaborationsService');
 const CollaborationsValidator = require('./validator/collaborations');
 
+// genres
+const genres = require('./api/genres');
+const GenresService = require('./services/postgres/GenresService');
+
 // playlist activities
 const ActivitiesService = require('./services/postgres/ActivitiesService');
 
-// Exports
-const _exports = require('./api/exports');
+// message broker
 const ProducerService = require('./services/rabbitmq/ProducerService');
-const ExportsValidator = require('./validator/exports');
 
 // uploads
-const StorageService = require('./services/storage/StorageService');
+const StorageService = require('./services/S3/StorageService');
 const UploadsValidator = require('./validator/uploads');
 
 // cache
@@ -57,11 +58,16 @@ const init = async () => {
   const albumsService = new AlbumsService(cacheService);
   const songsService = new SongsService();
   const collaborationsService = new CollaborationsService();
+  const genresService = new GenresService();
   const playlistsService = new PlaylistsService(collaborationsService);
-  const usersService = new UsersService();
+  const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
-  const storageService = new StorageService(path.resolve(__dirname, 'api/albums/file/cover'));
+  const coverStorageService = new StorageService();
+  const audioStorageService = new StorageService();
+  const songCoverStorageService = new StorageService();
+  const playlistCoverStorageService = new StorageService();
+  const pictureStorageService = new StorageService();
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -90,7 +96,31 @@ const init = async () => {
       sub: false,
       maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
-    validate: (artifacts) => ({
+    validate: async (artifacts) => {
+      const user = await usersService.getUserById(artifacts.decoded.payload.id);
+
+      if (!user || !user.is_active) {
+        return { isValid: false };
+      }
+
+      return {
+        isValid: true,
+        credentials: {
+          id: artifacts.decoded.payload.id,
+        },
+      };
+    },
+  });
+
+  server.auth.strategy('openmusic_jwt_2', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+    },
+    validate: async (artifacts) => ({
       isValid: true,
       credentials: {
         id: artifacts.decoded.payload.id,
@@ -104,7 +134,7 @@ const init = async () => {
       options: {
         albumsService,
         songsService,
-        storageService,
+        storageService: coverStorageService,
         albumsValidator: AlbumsValidator,
         uploadsValidator: UploadsValidator,
       },
@@ -112,8 +142,11 @@ const init = async () => {
     {
       plugin: songs,
       options: {
-        service: songsService,
-        validator: SongsValidator,
+        songsService,
+        audioStorageService,
+        coverStorageService: songCoverStorageService,
+        songsValidator: SongsValidator,
+        uploadsValidator: UploadsValidator,
       },
     },
     {
@@ -122,20 +155,28 @@ const init = async () => {
         playlistsService,
         songsService,
         activitiesService,
-        validator: PlaylistsValidator,
+        coverStorageService: playlistCoverStorageService,
+        playlistsValidator: PlaylistsValidator,
+        uploadsValidator: UploadsValidator,
       },
     },
     {
       plugin: users,
       options: {
-        service: usersService,
-        validator: UsersValidator,
+        usersService,
+        albumsService,
+        songsService,
+        storageService: pictureStorageService,
+        uploadsValidator: UploadsValidator,
+        usersValidator: UsersValidator,
       },
     },
     {
       plugin: authentications,
       options: {
+        cacheService,
         authenticationsService,
+        producerService: ProducerService,
         usersService,
         tokenManager: TokenManager,
         validator: AuthenticationsValidator,
@@ -151,11 +192,9 @@ const init = async () => {
       },
     },
     {
-      plugin: _exports,
+      plugin: genres,
       options: {
-        producerService: ProducerService,
-        playlistsService,
-        validator: ExportsValidator,
+        genresService,
       },
     },
   ]);
@@ -189,7 +228,7 @@ const init = async () => {
   });
 
   await server.start();
-  console.log(`Server berjalan pada ${server.info.uri}`);
+  console.log(`Server running on ${server.info.uri}`);
 };
 
 init();

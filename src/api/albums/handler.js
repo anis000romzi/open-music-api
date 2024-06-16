@@ -13,7 +13,9 @@ class AlbumsHandler {
 
   async postAlbumHandler(request, h) {
     this._albumsValidator.validateAlbumPayload(request.payload);
-    const albumId = await this._albumsService.addAlbum(request.payload);
+    const { id: credentialId } = request.auth.credentials;
+
+    const albumId = await this._albumsService.addAlbum(request.payload, credentialId);
 
     const response = h.response({
       status: 'success',
@@ -26,13 +28,37 @@ class AlbumsHandler {
     return response;
   }
 
+  async getAlbumsHandler(request) {
+    const { name, artist } = request.query;
+    const albums = await this._albumsService.getAlbums(name, artist);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
   async getAlbumByIdHandler(request) {
     const { id } = request.params;
     const {
-      id: albumId, name, year, cover: coverUrl,
+      id: albumId, name, year, artist_id: artistId, artist, cover: coverUrl,
     } = await this._albumsService.getAlbumById(id);
 
+    const albumLikes = await this._albumsService.getAlbumLikes(id);
+    const mappedAlbumLikes = albumLikes.result.map((like) => like.id);
+
     const songs = await this._songsService.getSongsByAlbum(id);
+    const mappedSongs = await Promise.all(songs.map(async (song) => {
+      const likes = await this._songsService.getSongLikes(song.id);
+      const mappedLikes = likes.result.map((like) => like.id);
+
+      return {
+        ...song,
+        likes: mappedLikes,
+      };
+    }));
 
     return {
       status: 'success',
@@ -41,9 +67,59 @@ class AlbumsHandler {
           id: albumId,
           name,
           year,
+          artistId,
+          artist,
           coverUrl,
-          songs,
+          likes: mappedAlbumLikes,
+          songs: mappedSongs,
         },
+      },
+    };
+  }
+
+  async getAlbumsByArtistHandler(request) {
+    const { id } = request.params;
+    const albums = await this._albumsService.getAlbumsByArtist(id);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getOwnedAlbumsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const albums = await this._albumsService.getAlbumsByArtist(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getLikedAlbumsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const albums = await this._albumsService.getLikedAlbums(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        albums,
+      },
+    };
+  }
+
+  async getPopularAlbumsHandler() {
+    const albums = await this._albumsService.getPopularAlbums();
+
+    return {
+      status: 'success',
+      data: {
+        albums,
       },
     };
   }
@@ -51,7 +127,9 @@ class AlbumsHandler {
   async putAlbumByIdHandler(request) {
     this._albumsValidator.validateAlbumPayload(request.payload);
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
     await this._albumsService.editAlbumById(id, request.payload);
 
     return {
@@ -62,7 +140,9 @@ class AlbumsHandler {
 
   async deleteAlbumByIdHandler(request) {
     const { id } = request.params;
+    const { id: credentialId } = request.auth.credentials;
 
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
     await this._albumsService.deleteAlbumById(id);
 
     return {
@@ -113,17 +193,21 @@ class AlbumsHandler {
     if (likes.cache) {
       response.header('X-Data-Source', 'cache');
     }
+
     return response;
   }
 
   async postUploadCoverHandler(request, h) {
     const { id } = request.params;
     const { cover } = request.payload;
+    const { id: credentialId } = request.auth.credentials;
     this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
 
     await this._albumsService.getAlbumById(id);
-    const filename = await this._storageService.writeFile(cover, cover.hapi);
-    const fileLocation = `http://${process.env.HOST}:${process.env.PORT}/albums/cover/${filename}`;
+    await this._albumsService.verifyAlbumArtist(id, credentialId);
+
+    const fileLocation = await this._storageService.writeFile(cover, cover.hapi);
+
     await this._albumsService.addCoverToAlbum(id, fileLocation);
 
     const response = h.response({

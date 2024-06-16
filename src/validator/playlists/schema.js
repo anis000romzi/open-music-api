@@ -2,6 +2,7 @@ const Joi = require('joi');
 
 const PostPlaylistPayloadSchema = Joi.object({
   name: Joi.string().required(),
+  isPublic: Joi.bool().required(),
 });
 
 const PostSongToPlaylistPayloadSchema = Joi.object({

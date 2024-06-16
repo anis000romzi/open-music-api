@@ -1,36 +1,82 @@
-const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
+const pool = require('./pool');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
+const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class AlbumsService {
   constructor(cacheService) {
-    this._pool = new Pool();
+    this._pool = pool;
     this._cacheService = cacheService;
   }
 
-  async addAlbum({ name, year }) {
+  async addAlbum({ name, year }, artist) {
     const id = `album-${nanoid(16)}`;
 
+    const createdAt = new Date().toISOString();
+    const updatedAt = createdAt;
+
     const query = {
-      text: 'INSERT INTO albums VALUES($1, $2, $3) RETURNING id',
-      values: [id, name, year],
+      text: 'INSERT INTO albums VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      values: [id, name, year, artist, null, createdAt, updatedAt],
     };
 
-    const result = await this._pool.query(query);
-
-    if (!result.rows[0].id) {
+    try {
+      const result = await this._pool.query(query);
+      return result.rows[0].id;
+    } catch (error) {
       throw new InvariantError('Album gagal ditambahkan');
     }
+  }
 
-    return result.rows[0].id;
+  async getAlbums(name, artist) {
+    let query = {
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist LIMIT 20`,
+    };
+
+    if (name !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE albums.name ILIKE '%' || $1 || '%' LIMIT 20`,
+        values: [name],
+      };
+    }
+    if (artist !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
+        values: [artist],
+      };
+    }
+    if (name !== undefined && artist !== undefined) {
+      query = {
+        text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+        FROM albums
+        LEFT JOIN users ON users.id = albums.artist
+        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
+        values: [name, artist],
+      };
+    }
+
+    const result = await this._pool.query(query);
+    return result.rows;
   }
 
   async getAlbumById(albumId) {
     const query = {
-      text: 'SELECT * FROM albums WHERE id = $1',
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      WHERE albums.id = $1`,
       values: [albumId],
     };
+
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
@@ -40,10 +86,56 @@ class AlbumsService {
     return result.rows[0];
   }
 
-  async editAlbumById(id, { name, year }) {
+  async getAlbumsByArtist(artistId) {
     const query = {
-      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
-      values: [name, year, id],
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      WHERE albums.artist = $1`,
+      values: [artistId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async getPopularAlbums() {
+    const query = {
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover, COUNT(DISTINCT user_album_likes.user_id) AS likes
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
+      GROUP BY albums.id, albums.name, albums.year, albums.artist, users.fullname, albums.cover
+      ORDER BY likes DESC LIMIT 20`,
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async getLikedAlbums(userId) {
+    const query = {
+      text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
+      FROM albums
+      LEFT JOIN users ON users.id = albums.artist
+      LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
+      WHERE user_album_likes.user_id = $1`,
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
+  async editAlbumById(id, { name, year }) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE albums SET name = $1, year = $2, updated_at = $3 WHERE id = $4 RETURNING id',
+      values: [name, year, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
@@ -51,6 +143,17 @@ class AlbumsService {
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui album. Id tidak ditemukan');
     }
+  }
+
+  async addCoverToAlbum(id, fileLocation) {
+    const updatedAt = new Date().toISOString();
+
+    const query = {
+      text: 'UPDATE albums SET cover = $1, updated_at = $2 WHERE id = $3',
+      values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
   }
 
   async deleteAlbumById(id) {
@@ -66,13 +169,23 @@ class AlbumsService {
     }
   }
 
-  async addCoverToAlbum(id, fileLocation) {
+  async verifyAlbumArtist(id, artist) {
     const query = {
-      text: 'UPDATE albums SET cover = $1 WHERE id = $2',
-      values: [fileLocation, id],
+      text: 'SELECT * FROM albums WHERE id = $1',
+      values: [id],
     };
 
-    await this._pool.query(query);
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Album tidak ditemukan');
+    }
+
+    const album = result.rows[0];
+
+    if (album.artist !== artist) {
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
   }
 
   async addLikeToAlbum(userId, albumId) {
@@ -82,7 +195,7 @@ class AlbumsService {
       throw new InvariantError('Gagal menambahkan like ke album');
     }
 
-    const id = `like-${nanoid(16)}`;
+    const id = `like_album-${nanoid(16)}`;
 
     const query = {
       text: 'INSERT INTO user_album_likes VALUES($1, $2, $3)',
@@ -118,7 +231,7 @@ class AlbumsService {
       };
     } catch (error) {
       const query = {
-        text: `SELECT * FROM users
+        text: `SELECT users.id FROM users
         LEFT JOIN user_album_likes ON user_album_likes.user_id = users.id
         WHERE user_album_likes.album_id = $1`,
         values: [id],

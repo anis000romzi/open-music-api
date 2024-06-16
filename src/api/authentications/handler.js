@@ -1,8 +1,18 @@
 const autoBind = require('auto-bind');
+const { customAlphabet } = require('nanoid');
 
 class AuthenticationsHandler {
-  constructor(authenticationsService, usersService, tokenManager, validator) {
+  constructor(
+    cacheService,
+    authenticationsService,
+    producerService,
+    usersService,
+    tokenManager,
+    validator,
+  ) {
+    this._cacheService = cacheService;
     this._authenticationsService = authenticationsService;
+    this._producerService = producerService;
     this._usersService = usersService;
     this._tokenManager = tokenManager;
     this._validator = validator;
@@ -13,8 +23,8 @@ class AuthenticationsHandler {
   async postAuthenticationHandler(request, h) {
     this._validator.validatePostAuthenticationPayload(request.payload);
 
-    const { username, password } = request.payload;
-    const id = await this._usersService.verifyUserCredential(username, password);
+    const { usernameOrEmail, password } = request.payload;
+    const id = await this._usersService.verifyUserCredential(usernameOrEmail, password);
 
     const accessToken = this._tokenManager.generateAccessToken({ id });
     const refreshToken = this._tokenManager.generateRefreshToken({ id });
@@ -28,6 +38,7 @@ class AuthenticationsHandler {
         refreshToken,
       },
     });
+
     response.code(201);
     return response;
   }
@@ -59,6 +70,47 @@ class AuthenticationsHandler {
       status: 'success',
       message: 'Refresh token berhasil dihapus',
     };
+  }
+
+  async postVerificationCodeHandler(request, h) {
+    const { userId } = request.payload;
+
+    const nanoid = customAlphabet('1234567890', 6);
+    const otp = `${nanoid()}`;
+
+    const { email } = await this._usersService.getUserById(userId);
+    await this._producerService.sendMessage('auth:verify', JSON.stringify({ userId, email, otp }));
+
+    const response = h.response({
+      status: 'success',
+      message: 'Permintaan Anda sedang kami proses',
+    });
+
+    response.code(201);
+    return response;
+  }
+
+  async postResetPasswordRequest(request, h) {
+    const { email } = request.payload;
+
+    const nanoid = customAlphabet('1234567890', 6);
+    const otp = `${nanoid()}`;
+
+    const { id: userId, username } = await this._usersService.getUserByEmail(email);
+    await this._producerService.sendMessage('auth:forgot', JSON.stringify({
+      userId, username, email, otp,
+    }));
+
+    const response = h.response({
+      status: 'success',
+      message: 'Permintaan Anda sedang kami proses',
+      data: {
+        userId,
+      },
+    });
+
+    response.code(201);
+    return response;
   }
 }
 
