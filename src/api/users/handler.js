@@ -67,13 +67,22 @@ class UsersHandler {
     const albums = await this._albumsService.getAlbumsByArtist(userId);
     const singles = await this._songsService.getSinglesByArtist(userId);
 
+    const mappedSingles = await Promise.all(singles.map(async (song) => {
+      const likes = await this._songsService.getSongLikes(song.id);
+      const mappedLikes = likes.result.map((like) => like.id);
+      return {
+        ...song,
+        likes: mappedLikes,
+      };
+    }));
+
     return {
       status: 'success',
       data: {
         ...user,
         followers: mappedFollowers,
         albums,
-        singles,
+        singles: mappedSingles,
       },
     };
   }

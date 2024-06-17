@@ -32,15 +32,17 @@ class SongsService {
 
   async getSongs(title, artist) {
     let query = {
-      text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
       FROM songs
+      LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN users ON users.id = songs.artist LIMIT 20`,
     };
 
     if (title !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
         FROM songs
+        LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [title],
@@ -48,8 +50,9 @@ class SongsService {
     }
     if (artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
         FROM songs
+        LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN users ON users.id = songs.artist
         WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [artist],
@@ -57,8 +60,9 @@ class SongsService {
     }
     if (title !== undefined && artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
         FROM songs
+        LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
         values: [title, artist],
@@ -87,9 +91,10 @@ class SongsService {
 
   async getLikedSongs(userId) {
     const query = {
-      text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
       FROM songs
       LEFT JOIN users ON users.id = songs.artist
+      LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
       WHERE user_song_likes.user_id = $1`,
       values: [userId],
