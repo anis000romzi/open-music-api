@@ -9,7 +9,7 @@ const UserPayloadSchema = Joi.object({
 
 const PutUserPayloadSchema = Joi.object({
   fullname: Joi.string().required(),
-  description: Joi.string().required(),
+  description: Joi.string().required().allow(''),
 });
 
 const PutUserEmailPayloadSchema = Joi.object({
