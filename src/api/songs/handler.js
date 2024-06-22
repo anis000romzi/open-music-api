@@ -35,8 +35,8 @@ class SongsHandler {
   }
 
   async getSongsHandler(request) {
-    const { title, artist } = request.query;
-    const songs = await this._songsService.getSongs(title, artist);
+    const { title, artist, genre } = request.query;
+    const songs = await this._songsService.getSongs(title, artist, genre);
 
     const mappedSongs = await Promise.all(
       songs.map(async (song) => {

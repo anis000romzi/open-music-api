@@ -30,19 +30,21 @@ class SongsService {
     }
   }
 
-  async getSongs(title, artist) {
+  async getSongs(title, artist, genre) {
     let query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
       FROM songs
       LEFT JOIN albums ON albums.id = songs.album_id
+      LEFT JOIN genres ON genres.id = songs.genre
       LEFT JOIN users ON users.id = songs.artist LIMIT 20`,
     };
 
     if (title !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
+        LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [title],
@@ -50,12 +52,24 @@ class SongsService {
     }
     if (artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
+        LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
         WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
         values: [artist],
+      };
+    }
+    if (genre !== undefined) {
+      query = {
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
+        FROM songs
+        LEFT JOIN albums ON albums.id = songs.album_id
+        LEFT JOIN genres ON genres.id = songs.genre
+        LEFT JOIN users ON users.id = songs.artist
+        WHERE genres.name ILIKE '%' || $1 || '%' LIMIT 20`,
+        values: [genre],
       };
     }
     if (title !== undefined && artist !== undefined) {
@@ -63,6 +77,7 @@ class SongsService {
         text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
+        LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
         WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
         values: [title, artist],
