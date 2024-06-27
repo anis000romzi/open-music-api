@@ -40,6 +40,10 @@ const CollaborationsValidator = require('./validator/collaborations');
 const genres = require('./api/genres');
 const GenresService = require('./services/postgres/GenresService');
 
+// history
+const history = require('./api/history');
+const HistoryService = require('./services/postgres/HistoryService');
+
 // playlist activities
 const ActivitiesService = require('./services/postgres/ActivitiesService');
 
@@ -59,6 +63,7 @@ const init = async () => {
   const songsService = new SongsService();
   const collaborationsService = new CollaborationsService();
   const genresService = new GenresService();
+  const historyService = new HistoryService();
   const playlistsService = new PlaylistsService(collaborationsService);
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
@@ -195,6 +200,13 @@ const init = async () => {
       plugin: genres,
       options: {
         genresService,
+      },
+    },
+    {
+      plugin: history,
+      options: {
+        historyService,
+        songsService,
       },
     },
   ]);
