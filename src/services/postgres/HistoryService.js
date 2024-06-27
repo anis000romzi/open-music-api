@@ -35,8 +35,8 @@ class HistoryService {
     const query = {
       text: `SELECT songs.id, songs.title, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
       FROM history
-      LEFT JOIN users ON users.id = history.user_id
       LEFT JOIN songs ON songs.id = history.song_id
+      LEFT JOIN users ON users.id = songs.artist
       WHERE history.user_id = $1
       ORDER BY history.time DESC LIMIT 50`,
       values: [userId],
