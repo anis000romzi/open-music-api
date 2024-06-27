@@ -32,7 +32,7 @@ class SongsService {
 
   async getSongs(title, artist, genre) {
     let query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, genres.name as genre, songs.listened, songs.audio, songs.cover, songs.duration
       FROM songs
       LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN genres ON genres.id = songs.genre
@@ -41,7 +41,7 @@ class SongsService {
 
     if (title !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.listened, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
@@ -52,7 +52,7 @@ class SongsService {
     }
     if (artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.listened, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
@@ -63,7 +63,7 @@ class SongsService {
     }
     if (genre !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, genres.name as genre, songs.listened, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
@@ -74,7 +74,7 @@ class SongsService {
     }
     if (title !== undefined && artist !== undefined) {
       query = {
-        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
+        text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.listened, songs.audio, songs.cover, songs.duration
         FROM songs
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
@@ -106,7 +106,7 @@ class SongsService {
 
   async getLikedSongs(userId) {
     const query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, songs.artist as artist_id, users.fullname as artist, songs.listened, songs.audio, songs.cover, songs.duration
       FROM songs
       LEFT JOIN users ON users.id = songs.artist
       LEFT JOIN albums ON albums.id = songs.album_id
@@ -140,6 +140,15 @@ class SongsService {
     const query = {
       text: 'UPDATE songs SET audio = $1, updated_at = $2 WHERE id = $3',
       values: [fileLocation, updatedAt, id],
+    };
+
+    await this._pool.query(query);
+  }
+
+  async addListenedCountToSong(id) {
+    const query = {
+      text: 'UPDATE songs SET listened = listened + 1 WHERE id = $1',
+      values: [id],
     };
 
     await this._pool.query(query);
@@ -188,7 +197,8 @@ class SongsService {
         songs.artist as artist_id, 
         genres.name as genre, 
         songs.genre as genre_id, 
-        songs.duration, 
+        songs.duration,
+        songs.listened, 
         songs.audio, 
         songs.cover 
       FROM 
@@ -197,7 +207,8 @@ class SongsService {
         LEFT JOIN genres ON genres.id = songs.genre 
         LEFT JOIN users ON users.id = songs.artist 
       WHERE 
-        songs.album_id = $1`,
+        songs.album_id = $1
+      ORDER BY songs.created_at DESC`,
       values: [id],
     };
 
@@ -217,7 +228,8 @@ class SongsService {
         songs.artist as artist_id, 
         genres.name as genre, 
         songs.genre as genre_id, 
-        songs.duration, 
+        songs.duration,
+        songs.listened, 
         songs.audio, 
         songs.cover 
       FROM 
@@ -245,7 +257,8 @@ class SongsService {
         songs.artist as artist_id, 
         genres.name as genre, 
         songs.genre as genre_id, 
-        songs.duration, 
+        songs.duration,
+        songs.listened, 
         songs.audio, 
         songs.cover 
       FROM 
@@ -356,7 +369,7 @@ class SongsService {
 
   async getSongsByPlaylist(id) {
     const query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, users.fullname as artist, songs.audio, songs.cover, songs.duration
+      text: `SELECT songs.id, songs.title, albums.name as album, users.fullname as artist, songs.listened, songs.audio, songs.cover, songs.duration
       FROM songs
       LEFT JOIN playlist_songs ON playlist_songs.song_id = songs.id
       LEFT JOIN albums ON albums.id = songs.album_id 
