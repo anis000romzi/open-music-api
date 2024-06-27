@@ -208,7 +208,7 @@ class SongsService {
         LEFT JOIN users ON users.id = songs.artist 
       WHERE 
         songs.album_id = $1
-      ORDER BY songs.created_at DESC`,
+      ORDER BY songs.created_at ASC`,
       values: [id],
     };
 
