@@ -181,52 +181,60 @@ class UsersService {
   }
 
   async activateUserById(id, otp) {
-    const storedOtp = await this._cacheService.get(`verify:${id}`);
+    try {
+      const storedOtp = await this._cacheService.get(`verify:${id}`);
 
-    if (storedOtp !== otp) {
-      throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
+      if (storedOtp !== otp) {
+        throw new InvariantError('OTP code doesn\'t match');
+      }
+
+      const updatedAt = new Date().toISOString();
+
+      const query = {
+        text: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+        values: [true, updatedAt, id],
+      };
+
+      const result = await this._pool.query(query);
+
+      if (!result.rows.length) {
+        throw new InvariantError('User verification failed');
+      }
+
+      await this._cacheService.delete(`verify:${id}`);
+      return result.rows[0].id;
+    } catch (error) {
+      throw new InvariantError('User verification failed');
     }
-
-    const updatedAt = new Date().toISOString();
-
-    const query = {
-      text: 'UPDATE users SET is_active = $1, updated_at = $2 WHERE id = $3 RETURNING id',
-      values: [true, updatedAt, id],
-    };
-
-    const result = await this._pool.query(query);
-
-    if (!result.rows.length) {
-      throw new InvariantError('Gagal mengaktifkan user');
-    }
-
-    await this._cacheService.delete(`verify:${id}`);
-    return result.rows[0].id;
   }
 
   async resetUserPasswordById(id, otp, password) {
-    const storedOtp = await this._cacheService.get(`forgot:${id}`);
+    try {
+      const storedOtp = await this._cacheService.get(`forgot:${id}`);
 
-    if (storedOtp !== otp) {
-      throw new InvariantError('Gagal verifikasi user, kode otp tidak sama');
+      if (storedOtp !== otp) {
+        throw new InvariantError('OTP code doesn\'t match');
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const updatedAt = new Date().toISOString();
+
+      const query = {
+        text: 'UPDATE users SET password = $1, updated_at = $2 WHERE id = $3 RETURNING id',
+        values: [hashedPassword, updatedAt, id],
+      };
+
+      const result = await this._pool.query(query);
+
+      if (!result.rows.length) {
+        throw new InvariantError('Password reset failed');
+      }
+
+      await this._cacheService.delete(`forgot:${id}`);
+      return result.rows[0].id;
+    } catch (error) {
+      throw new InvariantError('Password reset failed');
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const updatedAt = new Date().toISOString();
-
-    const query = {
-      text: 'UPDATE users SET password = $1, updated_at = $2 WHERE id = $3 RETURNING id',
-      values: [hashedPassword, updatedAt, id],
-    };
-
-    const result = await this._pool.query(query);
-
-    if (!result.rows.length) {
-      throw new InvariantError('Gagal mengubah password user');
-    }
-
-    await this._cacheService.delete(`forgot:${id}`);
-    return result.rows[0].id;
   }
 
   async verifyNewUsername(username) {
@@ -264,7 +272,7 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new AuthenticationError('Kredensial yang Anda berikan salah');
+      throw new AuthenticationError('Username/email or password wrong');
     }
 
     const { id, password: hashedPassword } = result.rows[0];
@@ -272,7 +280,7 @@ class UsersService {
     const match = await bcrypt.compare(password, hashedPassword);
 
     if (!match) {
-      throw new AuthenticationError('Kredensial yang Anda berikan salah');
+      throw new AuthenticationError('Username/email or password wrong');
     }
 
     return id;
@@ -351,6 +359,33 @@ class UsersService {
     return {
       result: result.rows,
     };
+  }
+
+  async getUserTotalListened(id) {
+    const query = {
+      text: 'SELECT SUM(listened) AS listened_count FROM songs WHERE artist = $1',
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows[0].listened_count;
+  }
+
+  async getUserTotalLiked(id) {
+    const query = {
+      text: `SELECT SUM(like_count) AS total_likes
+      FROM (SELECT COUNT(user_song_likes.user_id) AS like_count
+      FROM songs
+      LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
+      WHERE songs.artist = $1
+      GROUP BY songs.id) AS likes_subquery`,
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows[0].total_likes;
   }
 
   async verifyUserFollow(userId, artistId) {

@@ -83,7 +83,7 @@ class AuthenticationsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Permintaan Anda sedang kami proses',
+      message: 'OTP code has been sent',
     });
 
     response.code(201);
@@ -103,7 +103,7 @@ class AuthenticationsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Permintaan Anda sedang kami proses',
+      message: 'OTP code has been sent',
       data: {
         userId,
       },

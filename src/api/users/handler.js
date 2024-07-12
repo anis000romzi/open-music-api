@@ -46,12 +46,19 @@ class UsersHandler {
     const { id: credentialId } = request.auth.credentials;
 
     const users = await this._usersService.getUserById(credentialId);
+    const followers = await this._usersService.getArtistFollower(credentialId);
+    const mappedFollowers = followers.result.map((like) => like.id);
+    const listenedCount = await this._usersService.getUserTotalListened(credentialId);
+    const likedCount = await this._usersService.getUserTotalLiked(credentialId);
 
     return {
       status: 'success',
       data: {
         users: {
           ...users,
+          followers: mappedFollowers,
+          listenedCount,
+          likedCount,
         },
       },
     };
