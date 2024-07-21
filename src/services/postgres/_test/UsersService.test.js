@@ -69,6 +69,7 @@ describe('UsersService', () => {
         fullname: 'Testing testing',
         description: 'This is a testing account',
         is_active: false,
+        is_banned: false,
         picture: 'path/to/file',
       });
     });
