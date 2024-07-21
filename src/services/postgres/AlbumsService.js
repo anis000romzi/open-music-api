@@ -33,7 +33,8 @@ class AlbumsService {
     let query = {
       text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
       FROM albums
-      LEFT JOIN users ON users.id = albums.artist LIMIT 20`,
+      LEFT JOIN users ON users.id = albums.artist
+      WHERE users.is_banned = false LIMIT 20`,
     };
 
     if (name !== undefined) {
@@ -41,7 +42,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE albums.name ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE albums.name ILIKE '%' || $1 || '%' AND users.is_banned = false LIMIT 20`,
         values: [name],
       };
     }
@@ -50,7 +51,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE users.fullname ILIKE '%' || $1 || '%' AND users.is_banned = false LIMIT 20`,
         values: [artist],
       };
     }
@@ -59,7 +60,7 @@ class AlbumsService {
         text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
         FROM albums
         LEFT JOIN users ON users.id = albums.artist
-        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
+        WHERE albums.name ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' AND users.is_banned = false LIMIT 20`,
         values: [name, artist],
       };
     }
@@ -80,7 +81,7 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album tidak ditemukan');
+      throw new NotFoundError('Album not found');
     }
 
     return result.rows[0];
@@ -91,7 +92,7 @@ class AlbumsService {
       text: `SELECT albums.id, albums.name, albums.year, albums.artist as artist_id, users.fullname as artist, albums.cover
       FROM albums
       LEFT JOIN users ON users.id = albums.artist
-      WHERE albums.artist = $1`,
+      WHERE albums.artist = $1 AND users.is_banned = false`,
       values: [artistId],
     };
 
@@ -106,6 +107,7 @@ class AlbumsService {
       FROM albums
       LEFT JOIN users ON users.id = albums.artist
       LEFT JOIN user_album_likes ON user_album_likes.album_id = albums.id
+      WHERE users.is_banned = false
       GROUP BY albums.id, albums.name, albums.year, albums.artist, users.fullname, albums.cover
       ORDER BY likes DESC LIMIT 20`,
     };

@@ -36,7 +36,8 @@ class SongsService {
       FROM songs
       LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN genres ON genres.id = songs.genre
-      LEFT JOIN users ON users.id = songs.artist LIMIT 20`,
+      LEFT JOIN users ON users.id = songs.artist
+      WHERE songs.is_removed = false AND users.is_banned = false LIMIT 20`,
     };
 
     if (title !== undefined) {
@@ -46,7 +47,7 @@ class SongsService {
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
-        WHERE songs.title ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE songs.title ILIKE '%' || $1 || '%' AND songs.is_removed = false LIMIT 20`,
         values: [title],
       };
     }
@@ -57,7 +58,7 @@ class SongsService {
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
-        WHERE users.fullname ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE users.fullname ILIKE '%' || $1 || '%' AND songs.is_removed = false AND users.is_banned = false LIMIT 20`,
         values: [artist],
       };
     }
@@ -68,7 +69,7 @@ class SongsService {
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
-        WHERE genres.name ILIKE '%' || $1 || '%' LIMIT 20`,
+        WHERE genres.name ILIKE '%' || $1 || '%' AND songs.is_removed = false AND users.is_banned = false LIMIT 20`,
         values: [genre],
       };
     }
@@ -79,7 +80,7 @@ class SongsService {
         LEFT JOIN albums ON albums.id = songs.album_id
         LEFT JOIN genres ON genres.id = songs.genre
         LEFT JOIN users ON users.id = songs.artist
-        WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' LIMIT 20`,
+        WHERE songs.title ILIKE '%' || $1 || '%' OR users.fullname ILIKE '%' || $2 || '%' AND songs.is_removed = false AND users.is_banned = false LIMIT 20`,
         values: [title, artist],
       };
     }
@@ -111,7 +112,7 @@ class SongsService {
       LEFT JOIN users ON users.id = songs.artist
       LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
-      WHERE user_song_likes.user_id = $1`,
+      WHERE user_song_likes.user_id = $1 AND songs.is_removed = false`,
       values: [userId],
     };
 
@@ -207,7 +208,7 @@ class SongsService {
         LEFT JOIN genres ON genres.id = songs.genre 
         LEFT JOIN users ON users.id = songs.artist 
       WHERE 
-        songs.album_id = $1
+        songs.album_id = $1 AND songs.is_removed = false AND users.is_banned = false
       ORDER BY songs.created_at ASC`,
       values: [id],
     };
@@ -216,8 +217,8 @@ class SongsService {
     return result.rows;
   }
 
-  async getSongsByArtist(artistId) {
-    const query = {
+  async getSongsByArtist(artistId, owned) {
+    let query = {
       text: `SELECT 
         songs.id, 
         songs.title, 
@@ -238,16 +239,43 @@ class SongsService {
         LEFT JOIN genres ON genres.id = songs.genre 
         LEFT JOIN users ON users.id = songs.artist
       WHERE 
-        songs.artist = $1`,
+        songs.artist = $1 AND songs.is_removed = false AND users.is_banned = false`,
       values: [artistId],
     };
+
+    if (owned) {
+      query = {
+        text: `SELECT 
+          songs.id, 
+          songs.title, 
+          albums.name as album, 
+          songs.album_id,
+          songs.year, 
+          users.fullname as artist, 
+          songs.artist as artist_id, 
+          genres.name as genre, 
+          songs.genre as genre_id, 
+          songs.duration,
+          songs.listened, 
+          songs.audio, 
+          songs.cover 
+        FROM 
+          songs 
+          LEFT JOIN albums ON albums.id = songs.album_id 
+          LEFT JOIN genres ON genres.id = songs.genre 
+          LEFT JOIN users ON users.id = songs.artist
+        WHERE 
+          songs.artist = $1`,
+        values: [artistId],
+      };
+    }
 
     const result = await this._pool.query(query);
     return result.rows;
   }
 
-  async getSinglesByArtist(artistId) {
-    const query = {
+  async getSinglesByArtist(artistId, owned) {
+    let query = {
       text: `SELECT 
         songs.id, 
         songs.title, 
@@ -267,9 +295,35 @@ class SongsService {
         LEFT JOIN genres ON genres.id = songs.genre 
         LEFT JOIN users ON users.id = songs.artist 
       WHERE 
-        songs.artist = $1 AND albums.name IS NULL`,
+        songs.artist = $1 AND albums.name IS NULL AND songs.is_removed = false AND users.is_banned = false`,
       values: [artistId],
     };
+
+    if (owned) {
+      query = {
+        text: `SELECT 
+          songs.id, 
+          songs.title, 
+          albums.name as album, 
+          songs.year, 
+          users.fullname as artist, 
+          songs.artist as artist_id, 
+          genres.name as genre, 
+          songs.genre as genre_id, 
+          songs.duration,
+          songs.listened, 
+          songs.audio, 
+          songs.cover 
+        FROM 
+          songs 
+          LEFT JOIN albums ON albums.id = songs.album_id 
+          LEFT JOIN genres ON genres.id = songs.genre 
+          LEFT JOIN users ON users.id = songs.artist 
+        WHERE 
+          songs.artist = $1 AND albums.name IS NULL`,
+        values: [artistId],
+      };
+    }
 
     const result = await this._pool.query(query);
     return result.rows;
@@ -374,7 +428,7 @@ class SongsService {
       LEFT JOIN playlist_songs ON playlist_songs.song_id = songs.id
       LEFT JOIN albums ON albums.id = songs.album_id 
       LEFT JOIN users ON users.id = songs.artist
-      WHERE playlist_songs.playlist_id = $1`,
+      WHERE playlist_songs.playlist_id = $1 AND songs.is_removed = false AND users.is_banned = false`,
       values: [id],
     };
 

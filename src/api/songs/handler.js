@@ -104,7 +104,7 @@ class SongsHandler {
 
   async getOwnedSongsHandler(request) {
     const { id: credentialId } = request.auth.credentials;
-    const songs = await this._songsService.getSongsByArtist(credentialId);
+    const songs = await this._songsService.getSongsByArtist(credentialId, true);
 
     return {
       status: 'success',
@@ -116,7 +116,7 @@ class SongsHandler {
 
   async getOwnedSinglesHandler(request) {
     const { id: credentialId } = request.auth.credentials;
-    const songs = await this._songsService.getSinglesByArtist(credentialId);
+    const songs = await this._songsService.getSinglesByArtist(credentialId, true);
 
     return {
       status: 'success',

@@ -37,7 +37,7 @@ class HistoryService {
       FROM history
       LEFT JOIN songs ON songs.id = history.song_id
       LEFT JOIN users ON users.id = songs.artist
-      WHERE history.user_id = $1
+      WHERE history.user_id = $1 AND users.is_banned = false AND songs.is_removed = false
       ORDER BY history.time DESC LIMIT 50`,
       values: [userId],
     };
