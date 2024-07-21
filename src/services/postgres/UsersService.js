@@ -51,8 +51,7 @@ class UsersService {
   async getUsers(fullname, username) {
     let query = {
       text: `SELECT id, email, username, fullname, description, picture
-      FROM users WHERE is_active = true
-      WHERE is_banned = false LIMIT 20`,
+      FROM users WHERE is_active = true AND is_banned = false LIMIT 20`,
     };
 
     if (fullname !== undefined) {
