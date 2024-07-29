@@ -35,8 +35,14 @@ class AuthenticationsHandler {
       status: 'success',
       data: {
         accessToken,
-        refreshToken,
       },
+    });
+
+    // Set the refresh token as an HTTP-only cookie
+    response.state('refresh-token', refreshToken, {
+      isHttpOnly: true,
+      isSecure: true,
+      isSameSite: 'Strict',
     });
 
     response.code(201);
@@ -44,13 +50,12 @@ class AuthenticationsHandler {
   }
 
   async putAuthenticationHandler(request) {
-    this._validator.validatePutAuthenticationPayload(request.payload);
+    const { 'refresh-token': refreshToken } = request.state;
 
-    const { refreshToken } = request.payload;
     await this._authenticationsService.verifyRefreshToken(refreshToken);
     const { id } = this._tokenManager.verifyRefreshToken(refreshToken);
-
     const accessToken = this._tokenManager.generateAccessToken({ id });
+
     return {
       status: 'success',
       data: {
@@ -60,9 +65,7 @@ class AuthenticationsHandler {
   }
 
   async deleteAuthenticationHandler(request) {
-    this._validator.validateDeleteAuthenticationPayload(request.payload);
-
-    const { refreshToken } = request.payload;
+    const { 'refresh-token': refreshToken } = request.state;
     await this._authenticationsService.verifyRefreshToken(refreshToken);
     await this._authenticationsService.deleteRefreshToken(refreshToken);
 
