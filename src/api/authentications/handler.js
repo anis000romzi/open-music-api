@@ -40,6 +40,7 @@ class AuthenticationsHandler {
 
     // Set the refresh token as an HTTP-only cookie
     response.state('refresh-token', refreshToken, {
+      ttl: 30 * 24 * 60 * 60,
       isHttpOnly: true,
       isSecure: true,
       isSameSite: 'Strict',
