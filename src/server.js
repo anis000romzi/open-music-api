@@ -85,7 +85,7 @@ const init = async () => {
     host: process.env.HOST,
     routes: {
       cors: {
-        origin: ['https://app.myfreetunes.xyz'],
+        origin: ['https://app.myfreetunes.xyz', 'http://localhost:3000'],
         headers: ['Accept', 'Content-Type', 'Authorization'],
         credentials: true,
       },
