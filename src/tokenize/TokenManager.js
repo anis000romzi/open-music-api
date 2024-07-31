@@ -6,7 +6,7 @@ const TokenManager = {
   generateRefreshToken: (payload) => Jwt.token.generate(
     payload,
     process.env.REFRESH_TOKEN_KEY,
-    { ttlSec: 30 * 24 * 60 * 60 },
+    { ttlSec: 30 * 24 * 60 * 60 * 1000 },
   ),
   verifyRefreshToken: (refreshToken) => {
     try {
