@@ -3,7 +3,7 @@ const Joi = require('joi');
 const UserPayloadSchema = Joi.object({
   email: Joi.string().email().required(),
   username: Joi.string().trim().required().max(50),
-  password: Joi.string().required(),
+  password: Joi.string().required().min(8),
   fullname: Joi.string().required(),
 });
 
