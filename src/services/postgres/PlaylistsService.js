@@ -60,6 +60,46 @@ class PlaylistsService {
     return result.rows;
   }
 
+  async searchPlaylists(name, username) {
+    let query = {
+      text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      WHERE users.is_banned = false LIMIT 20 AND playlists.is_public = true`,
+    };
+
+    if (name !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE playlists.name ILIKE '%' || $1 || '%' AND users.is_banned = false AND playlists.is_public = true LIMIT 20`,
+        values: [name],
+      };
+    }
+    if (username !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE users.username ILIKE '%' || $1 || '%' AND users.is_banned = false AND playlists.is_public = true LIMIT 20`,
+        values: [username],
+      };
+    }
+    if (name !== undefined && username !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE (playlists.name ILIKE '%' || $1 || '%' OR users.username ILIKE '%' || $2 || '%') AND playlists.is_public = true AND users.is_banned = false LIMIT 20`,
+        values: [name, username],
+      };
+    }
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
   async getPopularPlaylists() {
     const query = {
       text: `SELECT playlists.*, users.username
@@ -71,6 +111,21 @@ class PlaylistsService {
     };
 
     const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async getLikedPlaylists(userId) {
+    const query = {
+      text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      LEFT JOIN user_playlist_likes ON user_playlist_likes.playlist_id = playlists.id
+      WHERE user_playlist_likes.user_id = $1 AND playlists.is_public = true`,
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+
     return result.rows;
   }
 
@@ -170,20 +225,20 @@ class PlaylistsService {
         result: JSON.parse(result),
       };
     } catch (error) {
-    const query = {
-      text: `SELECT users.id FROM users
-      LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
-      WHERE user_playlist_likes.playlist_id = $1`,
-      values: [id],
-    };
+      const query = {
+        text: `SELECT users.id FROM users
+        LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
+        WHERE user_playlist_likes.playlist_id = $1`,
+        values: [id],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
       await this._cacheService.set(`playlist:${id}`, JSON.stringify(result.rows));
 
-    return {
-      result: result.rows,
-    };
+      return {
+        result: result.rows,
+      };
     }
   }
 
