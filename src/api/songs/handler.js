@@ -57,13 +57,24 @@ class SongsHandler {
     };
   }
 
-  async getFavoriteSongsHandler() {
-    const songs = await this._songsService.getFavoriteSongs();
+  async getPopularSongsHandler() {
+    const songs = await this._songsService.getPopularSongs();
+
+    const mappedSongs = await Promise.all(
+      songs.map(async (song) => {
+        const likes = await this._songsService.getSongLikes(song.id);
+        const mappedLikes = likes.result.map((like) => like.id);
+        return {
+          ...song,
+          likes: mappedLikes,
+        };
+      }),
+    );
 
     return {
       status: 'success',
       data: {
-        songs,
+        songs: mappedSongs,
       },
     };
   }

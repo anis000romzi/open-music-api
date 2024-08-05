@@ -21,8 +21,8 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
-    path: '/songs/favorite',
-    handler: handler.getFavoriteSongsHandler,
+    path: '/songs/popular',
+    handler: handler.getPopularSongsHandler,
   },
   {
     method: 'GET',

@@ -89,15 +89,15 @@ class SongsService {
     return result.rows;
   }
 
-  async getFavoriteSongs() {
+  async getPopularSongs() {
     const query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, users.username as artist, songs.audio, COUNT(DISTINCT user_song_likes.user_id) AS likes
+      text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.listened, songs.audio, songs.cover, songs.duration, COUNT(DISTINCT user_song_likes.user_id) AS likes
       FROM songs
       LEFT JOIN users ON users.id = songs.artist
       LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
-      GROUP BY songs.id, songs.title, albums.name, users.username, songs.audio
-      ORDER BY likes DESC`,
+      GROUP BY songs.id, songs.title, albums.name, users.fullname, songs.audio
+      ORDER BY likes DESC, songs.listened DESC LIMIT 20`,
     };
 
     const result = await this._pool.query(query);
