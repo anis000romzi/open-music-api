@@ -140,18 +140,23 @@ class UsersService {
     return result.rows[0];
   }
 
-  async editUserById(id, { fullname, description }) {
+  async editUserById(id, { fullname, username, description }) {
     const updatedAt = new Date().toISOString();
+    const { username: oldUsername } = await this.getUserById(id);
+
+    if (oldUsername !== username) {
+      await this.verifyNewUsername(username);
+    }
 
     const query = {
-      text: 'UPDATE users SET fullname = $1, description = $2, updated_at = $3 WHERE id = $4 RETURNING id',
-      values: [fullname, description, updatedAt, id],
+      text: 'UPDATE users SET fullname = $1, username = $2, description = $3, updated_at = $4 WHERE id = $5 RETURNING id',
+      values: [fullname, username, description, updatedAt, id],
     };
 
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui user. Id tidak ditemukan');
+      throw new NotFoundError('Failed updating user info. Id not found');
     }
   }
 
@@ -160,12 +165,12 @@ class UsersService {
     const updatedAt = new Date().toISOString();
     const { is_active: isActive, email } = await this.getUserById(id);
 
-    if (newEmail !== email) {
-      await this.verifyNewEmail(newEmail);
+    if (isActive) {
+      throw new AuthorizationError('Failed updating user email. User is active');
     }
 
-    if (isActive) {
-      throw new AuthorizationError('Gagal mengganti email user. User telah aktif');
+    if (newEmail !== email) {
+      await this.verifyNewEmail(newEmail);
     }
 
     const query = {
@@ -176,7 +181,7 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal mengganti email user. Id tidak ditemukan');
+      throw new NotFoundError('Failed updating user email. Id not found');
     }
   }
 
