@@ -5,8 +5,9 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class SongsService {
-  constructor() {
+  constructor(cacheService) {
     this._pool = pool;
+    this._cacheService = cacheService;
   }
 
   async addSong({
@@ -464,6 +465,8 @@ class SongsService {
     };
 
     await this._pool.query(query);
+
+    await this._cacheService.delete(`song:${songId}`);
   }
 
   async deleteLikeFromSong(userId, songId) {
@@ -477,21 +480,33 @@ class SongsService {
     if (!result.rows.length) {
       throw new InvariantError('Gagal menghapus like dari lagu');
     }
+
+    await this._cacheService.delete(`song:${songId}`);
   }
 
   async getSongLikes(id) {
-    const query = {
-      text: `SELECT users.id FROM users
-      LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
-      WHERE user_song_likes.song_id = $1`,
-      values: [id],
-    };
+    try {
+      const result = await this._cacheService.get(`song:${id}`);
+      return {
+        cache: true,
+        result: JSON.parse(result),
+      };
+    } catch (error) {
+      const query = {
+        text: `SELECT users.id FROM users
+        LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
+        WHERE user_song_likes.song_id = $1`,
+        values: [id],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
-    return {
-      result: result.rows,
-    };
+      await this._cacheService.set(`song:${id}`, JSON.stringify(result.rows));
+
+      return {
+        result: result.rows,
+      };
+    }
   }
 
   async verifySongLikes(userId, songId) {

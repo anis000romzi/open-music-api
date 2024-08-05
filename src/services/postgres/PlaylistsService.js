@@ -5,9 +5,10 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class PlaylistsService {
-  constructor(collaborationService) {
+  constructor(collaborationService, cacheService) {
     this._pool = pool;
     this._collaborationService = collaborationService;
+    this._cacheService = cacheService;
   }
 
   async addPlaylist({ name, owner, isPublic }) {
@@ -142,6 +143,8 @@ class PlaylistsService {
     };
 
     await this._pool.query(query);
+
+    await this._cacheService.delete(`playlist:${playlistId}`);
   }
 
   async deleteLikeFromPlaylist(userId, playlistId) {
@@ -155,9 +158,18 @@ class PlaylistsService {
     if (!result.rows.length) {
       throw new InvariantError('Gagal menghapus like dari playlist');
     }
+
+    await this._cacheService.delete(`playlist:${playlistId}`);
   }
 
   async getPlaylistLikes(id) {
+    try {
+      const result = await this._cacheService.get(`playlist:${id}`);
+      return {
+        cache: true,
+        result: JSON.parse(result),
+      };
+    } catch (error) {
     const query = {
       text: `SELECT users.id FROM users
       LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
@@ -167,9 +179,12 @@ class PlaylistsService {
 
     const result = await this._pool.query(query);
 
+      await this._cacheService.set(`playlist:${id}`, JSON.stringify(result.rows));
+
     return {
       result: result.rows,
     };
+    }
   }
 
   async verifyPlaylistLikes(userId, playlistId) {
