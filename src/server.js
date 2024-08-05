@@ -65,12 +65,12 @@ const CacheService = require('./services/redis/CacheService');
 const init = async () => {
   const cacheService = new CacheService();
   const albumsService = new AlbumsService(cacheService);
-  const songsService = new SongsService();
+  const songsService = new SongsService(cacheService);
   const collaborationsService = new CollaborationsService();
   const genresService = new GenresService();
   const historyService = new HistoryService();
   const reportsService = new ReportsService();
-  const playlistsService = new PlaylistsService(collaborationsService);
+  const playlistsService = new PlaylistsService(collaborationsService, cacheService);
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
