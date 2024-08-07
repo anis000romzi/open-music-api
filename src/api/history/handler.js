@@ -17,7 +17,7 @@ class HistoryHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'History berhasil ditambahkan',
+      message: 'History created successfully',
     });
 
     response.code(201);

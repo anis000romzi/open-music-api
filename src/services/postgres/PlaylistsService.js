@@ -26,7 +26,7 @@ class PlaylistsService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('Playlist gagal dibuat');
+      throw new InvariantError('Failed to create playlist');
     }
   }
 
@@ -41,7 +41,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui playlist. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit playlist. Id not found');
     }
   }
 
@@ -140,7 +140,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist tidak ditemukan');
+      throw new NotFoundError('Playlist not found');
     }
 
     return result.rows[0];
@@ -168,7 +168,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist gagal dihapus. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit delete. Id not found');
     }
   }
 
@@ -187,7 +187,7 @@ class PlaylistsService {
     const likeData = await this.verifyPlaylistLikes(userId, playlistId);
 
     if (likeData.rows.length) {
-      throw new InvariantError('Gagal menambahkan like ke playlist');
+      throw new InvariantError('Failed to like playlist');
     }
 
     const id = `like_playlist-${nanoid(16)}`;
@@ -211,7 +211,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus like dari playlist');
+      throw new InvariantError('Failed to unlike playlist');
     }
 
     await this._cacheService.delete(`playlist:${playlistId}`);
@@ -263,13 +263,13 @@ class PlaylistsService {
 
     if (type === 'public') {
       if (!result.rows[0].is_public) {
-        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+        throw new AuthorizationError('You are not authorized to access this resource');
       }
     }
 
     if (type === 'private') {
       if (result.rows[0].is_public) {
-        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+        throw new AuthorizationError('You are not authorized to access this resource');
       }
     }
   }
@@ -283,13 +283,13 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist tidak ditemukan');
+      throw new NotFoundError('Playlist not found');
     }
 
     const playlist = result.rows[0];
 
     if (playlist.owner !== owner) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 

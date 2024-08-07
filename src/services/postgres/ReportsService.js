@@ -24,7 +24,7 @@ class ReportsService {
     const result = await this._pool.query(query);
 
     if (!result.rows[0].id) {
-      throw new InvariantError('History gagal dibuat');
+      throw new InvariantError('Failed to create report');
     }
 
     return result.rows[0].id;

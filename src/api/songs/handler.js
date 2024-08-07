@@ -25,7 +25,7 @@ class SongsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Lagu berhasil ditambahkan',
+      message: 'Song created successfully',
       data: {
         songId,
       },
@@ -158,7 +158,7 @@ class SongsHandler {
 
     return {
       status: 'success',
-      message: 'Lagu berhasil diperbarui',
+      message: 'Song edited successfully',
     };
   }
 
@@ -171,7 +171,7 @@ class SongsHandler {
 
     return {
       status: 'success',
-      message: 'Lagu berhasil dihapus',
+      message: 'Song deleted successfully',
     };
   }
 
@@ -184,7 +184,7 @@ class SongsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Like berhasil ditambahkan ke lagu',
+      message: 'Like successfully added to song',
     });
 
     response.code(201);
@@ -199,7 +199,7 @@ class SongsHandler {
 
     return {
       status: 'success',
-      message: 'Like berhasil dihapus dari lagu',
+      message: 'Like successfully removed from song',
     };
   }
 
@@ -233,7 +233,7 @@ class SongsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Audio berhasil diunggah',
+      message: 'Audio added successfully',
       data: {
         fileLocation,
       },
@@ -258,7 +258,7 @@ class SongsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Sampul berhasil diunggah',
+      message: 'Cover added successfully',
       data: {
         fileLocation,
       },

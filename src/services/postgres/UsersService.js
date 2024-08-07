@@ -44,7 +44,7 @@ class UsersService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('User gagal ditambahkan');
+      throw new InvariantError('Failed registering user');
     }
   }
 
@@ -251,7 +251,7 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (result.rows.length > 0) {
-      throw new InvariantError('Gagal menambahkan user. Username sudah digunakan.');
+      throw new InvariantError('Username is already in use');
     }
   }
 
@@ -264,7 +264,7 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (result.rows.length > 0) {
-      throw new InvariantError('Gagal menambahkan user. Email sudah digunakan.');
+      throw new InvariantError('Email is already in use');
     }
   }
 
@@ -306,7 +306,7 @@ class UsersService {
     const user = result.rows[0];
 
     if (user.id !== loggedUser) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 
@@ -325,7 +325,7 @@ class UsersService {
     const followData = await this.verifyUserFollow(userId, artistId);
 
     if (followData.rows.length) {
-      throw new InvariantError('Gagal mengikuti artist');
+      throw new InvariantError('Failed to follow artist');
     }
 
     const id = `follow-${nanoid(16)}`;
@@ -347,7 +347,7 @@ class UsersService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal berhenti mengikuti artist');
+      throw new InvariantError('Failed to unfollow artist');
     }
   }
 

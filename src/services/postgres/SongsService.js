@@ -27,7 +27,7 @@ class SongsService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('Lagu gagal ditambahkan');
+      throw new InvariantError('Failed to create song');
     }
   }
 
@@ -182,7 +182,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu tidak ditemukan');
+      throw new NotFoundError('Song not found');
     }
 
     return result.rows[0];
@@ -343,7 +343,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui lagu. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit song. Id not found');
     }
   }
 
@@ -356,7 +356,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu gagal dihapus. Id tidak ditemukan');
+      throw new NotFoundError('Failed to delete song. Id not found');
     }
   }
 
@@ -380,13 +380,13 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu tidak ditemukan');
+      throw new NotFoundError('Song not found');
     }
 
     const song = result.rows[0];
 
     if (song.artist !== artist) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 
@@ -401,7 +401,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menambahkan lagu ke playlist');
+      throw new InvariantError('Failed to add song to a playlist');
     }
     return result.rows[0].id;
   }
@@ -417,7 +417,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menambahkan lagu ke album');
+      throw new InvariantError('Failed to add song to album');
     }
     return result.rows[0].id;
   }
@@ -446,7 +446,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus lagu dari playlist');
+      throw new InvariantError('Failed to delete song from playlist');
     }
   }
 
@@ -454,7 +454,7 @@ class SongsService {
     const likeData = await this.verifySongLikes(userId, songId);
 
     if (likeData.rows.length) {
-      throw new InvariantError('Gagal menambahkan like ke lagu');
+      throw new InvariantError('Failed to like song');
     }
 
     const id = `like_song-${nanoid(16)}`;
@@ -478,7 +478,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus like dari lagu');
+      throw new InvariantError('Failed to unlike song');
     }
 
     await this._cacheService.delete(`song:${songId}`);

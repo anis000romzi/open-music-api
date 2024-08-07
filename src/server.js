@@ -245,7 +245,7 @@ const init = async () => {
 
       const newResponse = h.response({
         status: 'error',
-        message: 'terjadi kegagalan pada server kami',
+        message: 'there is a failure on our server',
         err: response.message,
       });
       newResponse.code(500);

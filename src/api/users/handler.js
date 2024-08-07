@@ -139,7 +139,7 @@ class UsersHandler {
 
     return {
       status: 'success',
-      message: 'User berhasil diperbarui',
+      message: 'User edited successfully',
     };
   }
 
@@ -153,7 +153,7 @@ class UsersHandler {
 
     return {
       status: 'success',
-      message: 'Email user berhasil diperbarui',
+      message: 'User email changed successfullly',
     };
   }
 
@@ -165,7 +165,7 @@ class UsersHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Verifikasi akun berhasil',
+      message: 'Account verified successfully',
     });
 
     response.code(201);
@@ -180,7 +180,7 @@ class UsersHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Password berhasil diubah',
+      message: 'Password changed successfully',
     });
 
     response.code(201);
@@ -196,7 +196,7 @@ class UsersHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Berhasil mengikuti artist',
+      message: 'Successfully follow the artist',
     });
 
     response.code(201);
@@ -211,7 +211,7 @@ class UsersHandler {
 
     return {
       status: 'success',
-      message: 'Berhasil berhenti mengikuti artist',
+      message: 'Successfully unfollow the artist',
     };
   }
 
@@ -245,7 +245,7 @@ class UsersHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Foto profile berhasil diunggah',
+      message: 'Profile picture added successfully',
       data: {
         fileLocation,
       },

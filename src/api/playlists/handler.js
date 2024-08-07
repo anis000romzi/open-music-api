@@ -112,7 +112,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Playlist berhasil diperbarui',
+      message: 'Playlist edited successfully',
     };
   }
 
@@ -125,7 +125,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Playlist berhasil dihapus',
+      message: 'Playlist deleted successfully',
     };
   }
 
@@ -143,7 +143,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Sampul berhasil diunggah',
+      message: 'Cover added successfully',
       data: {
         fileLocation,
       },
@@ -166,7 +166,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Lagu berhasil ditambahkan',
+      message: 'Song created successfully',
     });
     response.code(201);
     return response;
@@ -231,7 +231,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Like berhasil ditambahkan ke playlist',
+      message: 'Like successfully added to playlist',
     });
 
     response.code(201);
@@ -247,7 +247,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Like berhasil dihapus dari playlist',
+      message: 'Like successfully removed from playlist',
     };
   }
 
@@ -282,7 +282,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Lagu berhasil dihapus dari playlist',
+      message: 'Song successfully removed from playlist',
     };
   }
 
