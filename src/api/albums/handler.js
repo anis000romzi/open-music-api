@@ -19,7 +19,7 @@ class AlbumsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Album berhasil ditambahkan',
+      message: 'Album created successfully',
       data: {
         albumId,
       },
@@ -134,7 +134,7 @@ class AlbumsHandler {
 
     return {
       status: 'success',
-      message: 'Album berhasil diperbarui',
+      message: 'Album edited successfully',
     };
   }
 
@@ -147,7 +147,7 @@ class AlbumsHandler {
 
     return {
       status: 'success',
-      message: 'Album berhasil dihapus',
+      message: 'Album deleted successfully',
     };
   }
 
@@ -160,7 +160,7 @@ class AlbumsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Like berhasil ditambahkan ke album',
+      message: 'Like successfully added to album',
     });
     response.code(201);
     return response;
@@ -174,7 +174,7 @@ class AlbumsHandler {
 
     return {
       status: 'success',
-      message: 'Like berhasil dihapus dari album',
+      message: 'Like successfully removed from album',
     };
   }
 
@@ -212,7 +212,7 @@ class AlbumsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Sampul berhasil diunggah',
+      message: 'Cover added successfully',
       data: {
         fileLocation,
       },

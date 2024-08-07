@@ -25,7 +25,7 @@ class AlbumsService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('Album gagal ditambahkan');
+      throw new InvariantError('Failed to create album');
     }
   }
 
@@ -143,7 +143,7 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui album. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit album. Id not found');
     }
   }
 
@@ -167,7 +167,7 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album gagal dihapus. Id tidak ditemukan');
+      throw new NotFoundError('Failed to delete album. Id not found');
     }
   }
 
@@ -180,13 +180,13 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Album tidak ditemukan');
+      throw new NotFoundError('Album not found');
     }
 
     const album = result.rows[0];
 
     if (album.artist !== artist) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 
@@ -194,7 +194,7 @@ class AlbumsService {
     const likeData = await this.verifyAlbumLikes(userId, albumId);
 
     if (likeData.rows.length) {
-      throw new InvariantError('Gagal menambahkan like ke album');
+      throw new InvariantError('Failed to like album');
     }
 
     const id = `like_album-${nanoid(16)}`;
@@ -218,7 +218,7 @@ class AlbumsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus like dari album');
+      throw new InvariantError('Failed to unlike album');
     }
 
     await this._cacheService.delete(`albums:${albumId}`);

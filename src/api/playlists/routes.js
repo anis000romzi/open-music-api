@@ -19,8 +19,21 @@ const routes = (handler) => [
   },
   {
     method: 'GET',
+    path: '/playlists/search',
+    handler: handler.searchPlaylistsHandler,
+  },
+  {
+    method: 'GET',
     path: '/playlists/popular',
     handler: handler.getPopularPlaylistsHandler,
+  },
+  {
+    method: 'GET',
+    path: '/playlists/liked',
+    handler: handler.getLikedPlaylistsHandler,
+    options: {
+      auth: 'openmusic_jwt',
+    },
   },
   {
     method: 'GET',

@@ -57,6 +57,30 @@ class PlaylistsHandler {
     };
   }
 
+  async searchPlaylistsHandler(request) {
+    const { name, username } = request.query;
+    const playlists = await this._playlistsService.searchPlaylists(name, username);
+
+    return {
+      status: 'success',
+      data: {
+        playlists,
+      },
+    };
+  }
+
+  async getLikedPlaylistsHandler(request) {
+    const { id: credentialId } = request.auth.credentials;
+    const playlists = await this._playlistsService.getLikedPlaylists(credentialId);
+
+    return {
+      status: 'success',
+      data: {
+        playlists,
+      },
+    };
+  }
+
   async getPopularPlaylistsHandler() {
     const playlists = await this._playlistsService.getPopularPlaylists();
 
@@ -88,7 +112,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Playlist berhasil diperbarui',
+      message: 'Playlist edited successfully',
     };
   }
 
@@ -101,7 +125,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Playlist berhasil dihapus',
+      message: 'Playlist deleted successfully',
     };
   }
 
@@ -119,7 +143,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Sampul berhasil diunggah',
+      message: 'Cover added successfully',
       data: {
         fileLocation,
       },
@@ -142,7 +166,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Lagu berhasil ditambahkan',
+      message: 'Song created successfully',
     });
     response.code(201);
     return response;
@@ -167,6 +191,8 @@ class PlaylistsHandler {
 
     const collaborators = await this._playlistsService.getPlaylistCollaborators(playlistId);
     const songs = await this._songsService.getSongsByPlaylist(playlistId);
+    const playlistLikes = await this._playlistsService.getPlaylistLikes(playlistId);
+    const mappedPlaylistLikes = playlistLikes.result.map((like) => like.id);
 
     const mappedSongs = await Promise.all(songs.map(async (song) => {
       const likes = await this._songsService.getSongLikes(song.id);
@@ -188,6 +214,7 @@ class PlaylistsHandler {
           cover,
           is_public: isPublic,
           collaborators,
+          likes: mappedPlaylistLikes,
           songs: mappedSongs,
         },
       },
@@ -204,7 +231,7 @@ class PlaylistsHandler {
 
     const response = h.response({
       status: 'success',
-      message: 'Like berhasil ditambahkan ke playlist',
+      message: 'Like successfully added to playlist',
     });
 
     response.code(201);
@@ -220,7 +247,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Like berhasil dihapus dari playlist',
+      message: 'Like successfully removed from playlist',
     };
   }
 
@@ -235,6 +262,10 @@ class PlaylistsHandler {
         likes: likes.result.length,
       },
     });
+
+    if (likes.cache) {
+      response.header('X-Data-Source', 'cache');
+    }
 
     return response;
   }
@@ -251,7 +282,7 @@ class PlaylistsHandler {
 
     return {
       status: 'success',
-      message: 'Lagu berhasil dihapus dari playlist',
+      message: 'Song successfully removed from playlist',
     };
   }
 

@@ -5,9 +5,10 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class PlaylistsService {
-  constructor(collaborationService) {
+  constructor(collaborationService, cacheService) {
     this._pool = pool;
     this._collaborationService = collaborationService;
+    this._cacheService = cacheService;
   }
 
   async addPlaylist({ name, owner, isPublic }) {
@@ -25,7 +26,7 @@ class PlaylistsService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('Playlist gagal dibuat');
+      throw new InvariantError('Failed to create playlist');
     }
   }
 
@@ -40,7 +41,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui playlist. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit playlist. Id not found');
     }
   }
 
@@ -54,6 +55,46 @@ class PlaylistsService {
       GROUP BY playlists.id, users.username`,
       values: [owner],
     };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async searchPlaylists(name, username) {
+    let query = {
+      text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      WHERE users.is_banned = false LIMIT 20 AND playlists.is_public = true`,
+    };
+
+    if (name !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE playlists.name ILIKE '%' || $1 || '%' AND users.is_banned = false AND playlists.is_public = true LIMIT 20`,
+        values: [name],
+      };
+    }
+    if (username !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE users.username ILIKE '%' || $1 || '%' AND users.is_banned = false AND playlists.is_public = true LIMIT 20`,
+        values: [username],
+      };
+    }
+    if (name !== undefined && username !== undefined) {
+      query = {
+        text: `SELECT playlists.*, users.username
+        FROM playlists
+        LEFT JOIN users ON users.id = playlists.owner
+        WHERE (playlists.name ILIKE '%' || $1 || '%' OR users.username ILIKE '%' || $2 || '%') AND playlists.is_public = true AND users.is_banned = false LIMIT 20`,
+        values: [name, username],
+      };
+    }
 
     const result = await this._pool.query(query);
     return result.rows;
@@ -73,6 +114,21 @@ class PlaylistsService {
     return result.rows;
   }
 
+  async getLikedPlaylists(userId) {
+    const query = {
+      text: `SELECT playlists.*, users.username
+      FROM playlists
+      LEFT JOIN users ON users.id = playlists.owner
+      LEFT JOIN user_playlist_likes ON user_playlist_likes.playlist_id = playlists.id
+      WHERE user_playlist_likes.user_id = $1 AND playlists.is_public = true`,
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+
+    return result.rows;
+  }
+
   async getPlaylistById(id) {
     const query = {
       text: `SELECT playlists.*, users.username, users.id as owner_id
@@ -84,7 +140,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist tidak ditemukan');
+      throw new NotFoundError('Playlist not found');
     }
 
     return result.rows[0];
@@ -112,7 +168,7 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist gagal dihapus. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit delete. Id not found');
     }
   }
 
@@ -131,7 +187,7 @@ class PlaylistsService {
     const likeData = await this.verifyPlaylistLikes(userId, playlistId);
 
     if (likeData.rows.length) {
-      throw new InvariantError('Gagal menambahkan like ke playlist');
+      throw new InvariantError('Failed to like playlist');
     }
 
     const id = `like_playlist-${nanoid(16)}`;
@@ -142,6 +198,8 @@ class PlaylistsService {
     };
 
     await this._pool.query(query);
+
+    await this._cacheService.delete(`playlist:${playlistId}`);
   }
 
   async deleteLikeFromPlaylist(userId, playlistId) {
@@ -153,23 +211,35 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus like dari playlist');
+      throw new InvariantError('Failed to unlike playlist');
     }
+
+    await this._cacheService.delete(`playlist:${playlistId}`);
   }
 
   async getPlaylistLikes(id) {
-    const query = {
-      text: `SELECT users.id FROM users
-      LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
-      WHERE user_playlist_likes.playlist_id = $1`,
-      values: [id],
-    };
+    try {
+      const result = await this._cacheService.get(`playlist:${id}`);
+      return {
+        cache: true,
+        result: JSON.parse(result),
+      };
+    } catch (error) {
+      const query = {
+        text: `SELECT users.id FROM users
+        LEFT JOIN user_playlist_likes ON user_playlist_likes.user_id = users.id
+        WHERE user_playlist_likes.playlist_id = $1`,
+        values: [id],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
-    return {
-      result: result.rows,
-    };
+      await this._cacheService.set(`playlist:${id}`, JSON.stringify(result.rows));
+
+      return {
+        result: result.rows,
+      };
+    }
   }
 
   async verifyPlaylistLikes(userId, playlistId) {
@@ -193,13 +263,13 @@ class PlaylistsService {
 
     if (type === 'public') {
       if (!result.rows[0].is_public) {
-        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+        throw new AuthorizationError('You are not authorized to access this resource');
       }
     }
 
     if (type === 'private') {
       if (result.rows[0].is_public) {
-        throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+        throw new AuthorizationError('You are not authorized to access this resource');
       }
     }
   }
@@ -213,13 +283,13 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Playlist tidak ditemukan');
+      throw new NotFoundError('Playlist not found');
     }
 
     const playlist = result.rows[0];
 
     if (playlist.owner !== owner) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 

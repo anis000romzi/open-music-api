@@ -5,8 +5,9 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class SongsService {
-  constructor() {
+  constructor(cacheService) {
     this._pool = pool;
+    this._cacheService = cacheService;
   }
 
   async addSong({
@@ -26,7 +27,7 @@ class SongsService {
       const result = await this._pool.query(query);
       return result.rows[0].id;
     } catch (error) {
-      throw new InvariantError('Lagu gagal ditambahkan');
+      throw new InvariantError('Failed to create song');
     }
   }
 
@@ -89,15 +90,15 @@ class SongsService {
     return result.rows;
   }
 
-  async getFavoriteSongs() {
+  async getPopularSongs() {
     const query = {
-      text: `SELECT songs.id, songs.title, albums.name as album, users.username as artist, songs.audio, COUNT(DISTINCT user_song_likes.user_id) AS likes
+      text: `SELECT songs.id, songs.title, songs.artist as artist_id, albums.name as album, users.fullname as artist, songs.listened, songs.audio, songs.cover, songs.duration, COUNT(DISTINCT user_song_likes.user_id) AS likes
       FROM songs
       LEFT JOIN users ON users.id = songs.artist
       LEFT JOIN albums ON albums.id = songs.album_id
       LEFT JOIN user_song_likes ON user_song_likes.song_id = songs.id
-      GROUP BY songs.id, songs.title, albums.name, users.username, songs.audio
-      ORDER BY likes DESC`,
+      GROUP BY songs.id, songs.title, albums.name, users.fullname, songs.audio
+      ORDER BY likes DESC, songs.listened DESC LIMIT 20`,
     };
 
     const result = await this._pool.query(query);
@@ -181,7 +182,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu tidak ditemukan');
+      throw new NotFoundError('Song not found');
     }
 
     return result.rows[0];
@@ -342,7 +343,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Gagal memperbarui lagu. Id tidak ditemukan');
+      throw new NotFoundError('Failed to edit song. Id not found');
     }
   }
 
@@ -355,7 +356,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu gagal dihapus. Id tidak ditemukan');
+      throw new NotFoundError('Failed to delete song. Id not found');
     }
   }
 
@@ -379,13 +380,13 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('Lagu tidak ditemukan');
+      throw new NotFoundError('Song not found');
     }
 
     const song = result.rows[0];
 
     if (song.artist !== artist) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+      throw new AuthorizationError('You are not authorized to access this resource');
     }
   }
 
@@ -400,7 +401,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menambahkan lagu ke playlist');
+      throw new InvariantError('Failed to add song to a playlist');
     }
     return result.rows[0].id;
   }
@@ -416,7 +417,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menambahkan lagu ke album');
+      throw new InvariantError('Failed to add song to album');
     }
     return result.rows[0].id;
   }
@@ -445,7 +446,7 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus lagu dari playlist');
+      throw new InvariantError('Failed to delete song from playlist');
     }
   }
 
@@ -453,7 +454,7 @@ class SongsService {
     const likeData = await this.verifySongLikes(userId, songId);
 
     if (likeData.rows.length) {
-      throw new InvariantError('Gagal menambahkan like ke lagu');
+      throw new InvariantError('Failed to like song');
     }
 
     const id = `like_song-${nanoid(16)}`;
@@ -464,6 +465,8 @@ class SongsService {
     };
 
     await this._pool.query(query);
+
+    await this._cacheService.delete(`song:${songId}`);
   }
 
   async deleteLikeFromSong(userId, songId) {
@@ -475,23 +478,35 @@ class SongsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new InvariantError('Gagal menghapus like dari lagu');
+      throw new InvariantError('Failed to unlike song');
     }
+
+    await this._cacheService.delete(`song:${songId}`);
   }
 
   async getSongLikes(id) {
-    const query = {
-      text: `SELECT users.id FROM users
-      LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
-      WHERE user_song_likes.song_id = $1`,
-      values: [id],
-    };
+    try {
+      const result = await this._cacheService.get(`song:${id}`);
+      return {
+        cache: true,
+        result: JSON.parse(result),
+      };
+    } catch (error) {
+      const query = {
+        text: `SELECT users.id FROM users
+        LEFT JOIN user_song_likes ON user_song_likes.user_id = users.id
+        WHERE user_song_likes.song_id = $1`,
+        values: [id],
+      };
 
-    const result = await this._pool.query(query);
+      const result = await this._pool.query(query);
 
-    return {
-      result: result.rows,
-    };
+      await this._cacheService.set(`song:${id}`, JSON.stringify(result.rows));
+
+      return {
+        result: result.rows,
+      };
+    }
   }
 
   async verifySongLikes(userId, songId) {
