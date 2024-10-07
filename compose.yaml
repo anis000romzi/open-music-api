@@ -1,0 +1,69 @@
+services:
+  server:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: ${PORT}
+      # PostgreSQL configuration
+      PGUSER: ${PGUSER}
+      PGHOST: postgres
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+      PGPORT: ${PGPORT}
+      # PostgreSQL configuration for testing
+      PGUSER_TEST: ${PGUSER_TEST}
+      PGHOST_TEST: postgres
+      PGPASSWORD_TEST: ${PGPASSWORD_TEST}
+      PGDATABASE_TEST: ${PGDATABASE_TEST}
+      PGPORT_TEST: ${PGPORT_TEST}
+      # JWT tokens
+      ACCESS_TOKEN_KEY: ${ACCESS_TOKEN_KEY}
+      REFRESH_TOKEN_KEY: ${REFRESH_TOKEN_KEY}
+      ACCESS_TOKEN_AGE: ${ACCESS_TOKEN_AGE}
+      # RabbitMQ
+      RABBITMQ_SERVER: rabbitmq
+      # Redis
+      REDIS_SERVER: redis
+      # AWS SDK
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+      AWS_CLOUDFRONT_NAME: ${AWS_CLOUDFRONT_NAME}
+    ports:
+      - 5000:5000
+
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - open-music-api_postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  open-music-api_postgres_data:
