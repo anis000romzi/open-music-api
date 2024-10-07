@@ -22,4 +22,4 @@ COPY . .
 EXPOSE 5000
 
 # Run the application.
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "npm run migrate up && npm run start"]
