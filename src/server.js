@@ -62,6 +62,12 @@ const UploadsValidator = require('./validator/uploads');
 // cache
 const CacheService = require('./services/redis/CacheService');
 
+// logger
+const LoggerService = require('./services/logger/LoggerService');
+
+// helpers
+const redact = require('./helpers/redact');
+
 const init = async () => {
   const cacheService = new CacheService();
   const albumsService = new AlbumsService(cacheService);
@@ -79,6 +85,7 @@ const init = async () => {
   const songCoverStorageService = new StorageService();
   const playlistCoverStorageService = new StorageService();
   const pictureStorageService = new StorageService();
+  const loggerService = new LoggerService();
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -227,7 +234,13 @@ const init = async () => {
   ]);
 
   server.ext('onPreResponse', (request, h) => {
-    const { response } = request;
+    const {
+      method,
+      path,
+      payload,
+      headers,
+      response,
+    } = request;
 
     if (response instanceof Error) {
       if (response instanceof ClientError) {
@@ -236,6 +249,8 @@ const init = async () => {
           message: response.message,
         });
         newResponse.code(response.statusCode);
+
+        loggerService.warn(`Error ${response.statusCode}: ${response.message}`);
         return newResponse;
       }
 
@@ -246,16 +261,37 @@ const init = async () => {
       const newResponse = h.response({
         status: 'error',
         message: 'there is a failure on our server',
-        err: response.message,
       });
       newResponse.code(500);
+
+      loggerService.error(`Error 500: ${response.message}`);
       return newResponse;
     }
+
+    const statusCode = response?.statusCode || response?.output?.statusCode;
+    const duration = Date.now() - request.plugins.startTime;
+
+    let responseBody = '';
+    if (response && !response.isBoom && typeof response.source === 'object') {
+      responseBody = JSON.stringify(response.source);
+    } else if (response?.output?.payload) {
+      responseBody = JSON.stringify(response.output.payload);
+    }
+
+    loggerService.info(
+      `
+      ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
+      Request Headers: ${JSON.stringify(redact(headers))}
+      Request Payload: ${JSON.stringify(redact(payload))}
+      Response Body: ${responseBody}
+      `.trim(),
+    );
+
     return h.continue;
   });
 
   await server.start();
-  console.log(`Server running on ${server.info.uri}`);
+  loggerService.log(`Server running on ${server.info.uri}`);
 };
 
 init();
