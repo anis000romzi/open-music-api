@@ -290,8 +290,30 @@ const init = async () => {
     return h.continue;
   });
 
+  const routes = server.table();
+  const grouped = {};
+
+  routes.forEach((route) => {
+    const pluginName = route.realm.plugin || 'root';
+    if (!grouped[pluginName]) {
+      grouped[pluginName] = [];
+    }
+
+    grouped[pluginName].push({
+      method: route.method.toUpperCase(),
+      path: route.path,
+    });
+  });
+
+  Object.entries(grouped).forEach(([pluginName, pluginRoutes]) => {
+    loggerService.info(`📦 Plugin: ${pluginName}`);
+    pluginRoutes.forEach((route) => {
+      loggerService.info(`[${route.method}] ${route.path}`);
+    });
+  });
+
   await server.start();
-  loggerService.log(`Server running on ${server.info.uri}`);
+  loggerService.log(`✅ Server running on ${server.info.uri}`);
 };
 
 init();
