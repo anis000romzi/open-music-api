@@ -7,7 +7,8 @@ const {
   colorize,
 } = format;
 
-const logFormat = printf(({ level, message, time }) => `${time} [${level}]: ${message}`);
+// eslint-disable-next-line no-shadow
+const logFormat = printf(({ level, message, timestamp }) => `${timestamp} [${level}]: ${message}`);
 
 class LoggerService {
   constructor() {
@@ -32,7 +33,7 @@ class LoggerService {
   }
 
   log(message) {
-    this.logger.log(message);
+    this.logger.info(message);
   }
 
   info(message) {

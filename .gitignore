@@ -8,3 +8,4 @@ src/api/songs/file
 src/api/users/file
 src/api/playlists/file
 .vscode
+logs
