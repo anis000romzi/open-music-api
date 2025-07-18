@@ -8,6 +8,7 @@
     "start:dev": "nodemon ./src/server.js",
     "lint": "eslint ./",
     "db:create": "node ./db/create.js",
+    "db:seed": "node ./db/seed.js",
     "migrate": "node-pg-migrate",
     "migrate:test": "node-pg-migrate -f config/database/test.json",
     "test": "jest --setupFiles dotenv/config -i",
