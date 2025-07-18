@@ -233,6 +233,11 @@ const init = async () => {
     },
   ]);
 
+  server.ext('onRequest', (request, h) => {
+    request.plugins.startTime = Date.now();
+    return h.continue;
+  });
+
   server.ext('onPreResponse', (request, h) => {
     const {
       method,
