@@ -3,6 +3,8 @@ require('dotenv').config();
 const Hapi = require('@hapi/hapi');
 const Jwt = require('@hapi/jwt');
 const Inert = require('@hapi/inert');
+const Swagger = require('hapi-swagger');
+const Vision = require('@hapi/vision');
 const ClientError = require('./exceptions/ClientError');
 
 // albums
@@ -105,6 +107,19 @@ const init = async () => {
     },
     {
       plugin: Inert,
+    },
+    {
+      plugin: Vision,
+    },
+    {
+      plugin: Swagger,
+      options: {
+        info: {
+          title: 'Open Music API',
+          version: '1.0.0',
+        },
+        jsonPath: '/swagger.json',
+      },
     },
   ]);
 
@@ -232,6 +247,12 @@ const init = async () => {
       },
     },
   ]);
+
+  server.route({
+    method: 'GET',
+    path: '/docs',
+    handler: (request, h) => h.file('./public/rapidoc.html'),
+  });
 
   server.ext('onRequest', (request, h) => {
     request.plugins.startTime = Date.now();
