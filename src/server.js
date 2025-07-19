@@ -247,6 +247,25 @@ const init = async () => {
       response,
     } = request;
 
+    const statusCode = response?.statusCode || response?.output?.statusCode;
+    const duration = Date.now() - request.plugins.startTime;
+
+    let responseBody = '';
+    if (response && !response.isBoom && typeof response.source === 'object') {
+      responseBody = JSON.stringify(response.source);
+    } else if (response?.output?.payload) {
+      responseBody = JSON.stringify(response.output.payload);
+    }
+
+    loggerService.info(
+      `
+      ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
+      Request Headers: ${JSON.stringify(redact(headers))}
+      Request Payload: ${JSON.stringify(redact(payload))}
+      Response Body: ${responseBody}
+      `.trim(),
+    );
+
     if (response instanceof Error) {
       if (response instanceof ClientError) {
         const newResponse = h.response({
@@ -272,25 +291,6 @@ const init = async () => {
       loggerService.error(`Error 500: ${response.message}`);
       return newResponse;
     }
-
-    const statusCode = response?.statusCode || response?.output?.statusCode;
-    const duration = Date.now() - request.plugins.startTime;
-
-    let responseBody = '';
-    if (response && !response.isBoom && typeof response.source === 'object') {
-      responseBody = JSON.stringify(response.source);
-    } else if (response?.output?.payload) {
-      responseBody = JSON.stringify(response.output.payload);
-    }
-
-    loggerService.info(
-      `
-      ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
-      Request Headers: ${JSON.stringify(redact(headers))}
-      Request Payload: ${JSON.stringify(redact(payload))}
-      Response Body: ${responseBody}
-      `.trim(),
-    );
 
     return h.continue;
   });
