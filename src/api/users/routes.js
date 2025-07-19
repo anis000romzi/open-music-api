@@ -5,6 +5,11 @@ const routes = (handler) => [
     method: 'GET',
     path: '/users',
     handler: handler.getUsersHandler,
+    options: {
+      description: 'Get all users',
+      notes: 'Returns all users',
+      tags: ['api'],
+    },
   },
   {
     method: 'POST',
@@ -36,6 +41,11 @@ const routes = (handler) => [
     method: 'GET',
     path: '/users/{id}',
     handler: handler.getUserByIdHandler,
+    options: {
+      description: 'Get user by ID',
+      notes: 'Returns a user item by the ID passed in the path',
+      tags: ['api'],
+    },
   },
   {
     method: 'PUT',
