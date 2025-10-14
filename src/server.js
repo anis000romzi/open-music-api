@@ -5,6 +5,7 @@ const Jwt = require('@hapi/jwt');
 const Inert = require('@hapi/inert');
 const Swagger = require('hapi-swagger');
 const Vision = require('@hapi/vision');
+const { v4: uuidv4 } = require('uuid');
 const ClientError = require('./exceptions/ClientError');
 
 // albums
@@ -256,6 +257,7 @@ const init = async () => {
   });
 
   server.ext('onRequest', (request, h) => {
+    request.app.requestId = uuidv4();
     request.plugins.startTime = Date.now();
     return h.continue;
   });
@@ -271,6 +273,7 @@ const init = async () => {
 
     const statusCode = response?.statusCode || response?.output?.statusCode;
     const duration = Date.now() - request.plugins.startTime;
+    const { requestId } = request.app;
 
     let responseBody = '';
     if (response && !response.isBoom && typeof response.source === 'object') {
@@ -281,10 +284,10 @@ const init = async () => {
 
     loggerService.info(
       `
-      ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
-      Request Headers: ${JSON.stringify(redact(headers))}
-      Request Payload: ${JSON.stringify(redact(payload))}
-      Response Body: ${responseBody}
+[RequestID: ${requestId}] ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
+Request Headers: ${JSON.stringify(redact(headers))}
+Request Payload: ${JSON.stringify(redact(payload))}
+Response Body: ${responseBody}
       `.trim(),
     );
 
@@ -341,6 +344,7 @@ const init = async () => {
 
   await server.start();
   loggerService.log(`✅ Server running on ${server.info.uri}`);
+  loggerService.log(`📃 Documentations url on ${server.info.uri}/docs`);
 };
 
 init();
