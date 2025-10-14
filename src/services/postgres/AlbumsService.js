@@ -5,26 +5,34 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class AlbumsService {
-  constructor(cacheService) {
+  constructor(prisma, cacheService) {
     this._pool = pool;
+    this._prisma = prisma;
     this._cacheService = cacheService;
   }
 
   async addAlbum({ name, year }, artist) {
     const id = `album-${nanoid(16)}`;
-
-    const createdAt = new Date().toISOString();
+    const createdAt = new Date();
     const updatedAt = createdAt;
 
-    const query = {
-      text: 'INSERT INTO albums VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      values: [id, name, year, artist, null, createdAt, updatedAt],
-    };
-
     try {
-      const result = await this._pool.query(query);
-      return result.rows[0].id;
+      const album = await this._prisma.albums.create({
+        data: {
+          id,
+          name,
+          year,
+          artist,
+          cover: null,
+          created_at: createdAt,
+          updated_at: updatedAt,
+        },
+        select: { id: true },
+      });
+
+      return album.id;
     } catch (error) {
+      console.error(error);
       throw new InvariantError('Failed to create album');
     }
   }

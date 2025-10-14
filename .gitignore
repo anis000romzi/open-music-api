@@ -9,3 +9,4 @@ src/api/users/file
 src/api/playlists/file
 .vscode
 logs
+/src/generated/prisma
