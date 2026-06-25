@@ -72,11 +72,12 @@ const LoggerService = require('./services/logger/LoggerService');
 
 // helpers
 const redact = require('./helpers/redact');
+const prisma = require('./helpers/prisma');
 
 const init = async () => {
   const cacheService = new CacheService();
-  const albumsService = new AlbumsService(cacheService);
-  const songsService = new SongsService(cacheService);
+  const albumsService = new AlbumsService(prisma, cacheService);
+  const songsService = new SongsService(prisma, cacheService);
   const collaborationsService = new CollaborationsService();
   const genresService = new GenresService();
   const historyService = new HistoryService();

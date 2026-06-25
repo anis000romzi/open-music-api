@@ -5,8 +5,9 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class SongsService {
-  constructor(cacheService) {
+  constructor(prisma, cacheService) {
     this._pool = pool;
+    this._prisma = prisma;
     this._cacheService = cacheService;
   }
 
