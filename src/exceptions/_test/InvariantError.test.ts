@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
-const ClientError = require('../ClientError');
-const InvariantError = require('../InvariantError');
+import ClientError from '../ClientError';
+import InvariantError from '../InvariantError';
 
 describe('InvariantError', () => {
   it('should create an error correctly', () => {

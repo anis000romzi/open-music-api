@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
-const ClientError = require('../ClientError');
-const AuthorizationError = require('../AuthorizationError');
+import AuthorizationError from "../AuthorizationError";
+import ClientError from "../ClientError";
 
 describe('AuthorizationError', () => {
   it('should create AuthorizationError correctly', () => {

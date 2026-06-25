@@ -1,12 +1,14 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const Hapi = require('@hapi/hapi');
-const Jwt = require('@hapi/jwt');
-const Inert = require('@hapi/inert');
+import Hapi from '@hapi/hapi';
+import Boom from '@hapi/boom';
+import Jwt from '@hapi/jwt';
+import Inert from '@hapi/inert';
+import Vision from '@hapi/vision';
+import { v4 as uuidv4 } from 'uuid';
+import ClientError from './exceptions/ClientError';
+
 const Swagger = require('hapi-swagger');
-const Vision = require('@hapi/vision');
-const { v4: uuidv4 } = require('uuid');
-const ClientError = require('./exceptions/ClientError');
 
 // albums
 const albums = require('./api/albums');
@@ -79,7 +81,10 @@ const init = async () => {
   const genresService = new GenresService();
   const historyService = new HistoryService();
   const reportsService = new ReportsService();
-  const playlistsService = new PlaylistsService(collaborationsService, cacheService);
+  const playlistsService = new PlaylistsService(
+    collaborationsService,
+    cacheService,
+  );
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
@@ -261,66 +266,69 @@ const init = async () => {
     return h.continue;
   });
 
-  server.ext('onPreResponse', (request, h) => {
-    const {
-      method,
-      path,
-      payload,
-      headers,
-      response,
-    } = request;
+  server.ext(
+    'onPreResponse',
+    (request: Hapi.Request, h: Hapi.ResponseToolkit) => {
+      const { method, path, payload, headers, response } = request;
 
-    const statusCode = response?.statusCode || response?.output?.statusCode;
-    const duration = Date.now() - request.plugins.startTime;
-    const { requestId } = request.app;
+      const statusCode = (response as Boom.Boom)?.isBoom
+        ? (response as Boom.Boom).output.statusCode
+        : (response as Hapi.ResponseObject).statusCode;
+      const duration = Date.now() - request.plugins.startTime;
+      const { requestId } = request.app;
 
-    let responseBody = '';
-    if (response && !response.isBoom && typeof response.source === 'object') {
-      responseBody = JSON.stringify(response.source);
-    } else if (response?.output?.payload) {
-      responseBody = JSON.stringify(response.output.payload);
-    }
+      let responseBody = '';
+      if (response && !(response as Boom.Boom).isBoom) {
+        const res = response as Hapi.ResponseObject;
+        if (typeof res.source === 'object') {
+          responseBody = JSON.stringify(res.source);
+        }
+      } else if ((response as Boom.Boom)?.output?.payload) {
+        responseBody = JSON.stringify((response as Boom.Boom).output.payload);
+      }
 
-    loggerService.info(
-      `
+      loggerService.info(
+        `
 [RequestID: ${requestId}] ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
 Request Headers: ${JSON.stringify(redact(headers))}
 Request Payload: ${JSON.stringify(redact(payload))}
 Response Body: ${responseBody}
       `.trim(),
-    );
+      );
 
-    if (response instanceof Error) {
-      if (response instanceof ClientError) {
+      if (response instanceof Error) {
+        if (response instanceof ClientError) {
+          const statusCode = response.statusCode;
+          const newResponse = h.response({
+            status: 'fail',
+            message: response.message,
+          });
+          newResponse.code(statusCode);
+
+          loggerService.warn(`Error ${statusCode}: ${response.message}`);
+          return newResponse;
+        }
+
+        if (response instanceof ClientError === false) {
+          return h.continue;
+        }
+
         const newResponse = h.response({
-          status: 'fail',
-          message: response.message,
+          status: 'error',
+          message: 'there is a failure on our server',
         });
-        newResponse.code(response.statusCode);
+        newResponse.code(500);
 
-        loggerService.warn(`Error ${response.statusCode}: ${response.message}`);
+        loggerService.error(`Error 500: ${response.message}`);
         return newResponse;
       }
 
-      if (!response.isServer) {
-        return h.continue;
-      }
+      return h.continue;
+    },
+  );
 
-      const newResponse = h.response({
-        status: 'error',
-        message: 'there is a failure on our server',
-      });
-      newResponse.code(500);
-
-      loggerService.error(`Error 500: ${response.message}`);
-      return newResponse;
-    }
-
-    return h.continue;
-  });
-
-  const routes = server.table();
-  const grouped = {};
+  const routes = server.table() as any[];
+  const grouped: Record<string, Array<{ method: string; path: string }>> = {};
 
   routes.forEach((route) => {
     const pluginName = route.realm.plugin || 'root';
@@ -336,9 +344,11 @@ Response Body: ${responseBody}
 
   Object.entries(grouped).forEach(([pluginName, pluginRoutes]) => {
     loggerService.info(`📦 Plugin: ${pluginName}`);
-    pluginRoutes.forEach((route) => {
-      loggerService.info(`[${route.method}] ${route.path}`);
-    });
+    (pluginRoutes as Array<{ method: string; path: string }>).forEach(
+      (route) => {
+        loggerService.info(`[${route.method}] ${route.path}`);
+      },
+    );
   });
 
   await server.start();
