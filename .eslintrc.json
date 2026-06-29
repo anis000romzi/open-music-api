@@ -18,6 +18,13 @@
     "linebreak-style": 0,
     "no-console": 0,
     "no-underscore-dangle": 0,
-    "import/no-extraneous-dependencies": 0
+    "import/no-extraneous-dependencies": 0,
+    "import/prefer-default-export": 0,
+    "import/no-unresolved": 0,
+    "import/extensions": 0,
+    "import/no-relative-packages": 0,
+    "lines-between-class-members": 0,
+    "import/first": 0,
+    "import/order": 0
   }
 }

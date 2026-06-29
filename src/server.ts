@@ -6,19 +6,21 @@ import Jwt from '@hapi/jwt';
 import Inert from '@hapi/inert';
 import Vision from '@hapi/vision';
 import { v4 as uuidv4 } from 'uuid';
-import ClientError from './exceptions/ClientError';
+import { ClientError } from './exceptions/ClientError';
 
-const Swagger = require('hapi-swagger');
+import * as Swagger from 'hapi-swagger';
 
 // albums
-const albums = require('./api/albums');
-const AlbumsService = require('./services/postgres/AlbumsService');
-const AlbumsValidator = require('./validator/albums');
+import { albums } from './api/albums';
+import { PostgresAlbumsService } from './services/postgres/PostgresAlbumsService';
+import { IAlbumsService } from './services/interfaces/IAlbumsService';
+import { AlbumsValidator } from './validator/albums';
 
 // songs
-const songs = require('./api/songs');
-const SongsService = require('./services/postgres/SongsService');
-const SongsValidator = require('./validator/songs');
+import { songs } from './api/songs';
+import { PostgresSongsService } from './services/postgres/PostgresSongsService';
+import { ISongsService } from './services/interfaces/ISongsService';
+import { SongsValidator } from './validator/songs';
 
 // playlists
 const playlists = require('./api/playlists');
@@ -61,23 +63,29 @@ const ActivitiesService = require('./services/postgres/ActivitiesService');
 const ProducerService = require('./services/rabbitmq/ProducerService');
 
 // uploads
-const StorageService = require('./services/S3/StorageService');
-const UploadsValidator = require('./validator/uploads');
+import { IStorageService } from './services/interfaces/IStorageService';
+import { S3StorageService } from './services/storage/S3StorageService';
+import { UploadsValidator } from './validator/uploads';
 
 // cache
-const CacheService = require('./services/redis/CacheService');
+import { RedisCacheService } from './services/cache/RedisCacheService';
+import { ICacheService } from './services/interfaces/ICacheService';
 
 // logger
-const LoggerService = require('./services/logger/LoggerService');
+import { WinstonLoggerService } from './services/logger/WinstonLoggerService';
+import { ILoggerService } from './services/interfaces/ILoggerService';
 
 // helpers
-const redact = require('./helpers/redact');
-const prisma = require('./helpers/prisma');
+import redact from './helpers/redact';
+import prisma from './helpers/prisma';
 
 const init = async () => {
-  const cacheService = new CacheService();
-  const albumsService = new AlbumsService(prisma, cacheService);
-  const songsService = new SongsService(prisma, cacheService);
+  const cacheService: ICacheService = new RedisCacheService();
+  const albumsService: IAlbumsService = new PostgresAlbumsService(
+    prisma,
+    cacheService,
+  );
+  const songsService: ISongsService = new PostgresSongsService(prisma, cacheService);
   const collaborationsService = new CollaborationsService();
   const genresService = new GenresService();
   const historyService = new HistoryService();
@@ -89,12 +97,12 @@ const init = async () => {
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
   const activitiesService = new ActivitiesService();
-  const coverStorageService = new StorageService();
-  const audioStorageService = new StorageService();
-  const songCoverStorageService = new StorageService();
-  const playlistCoverStorageService = new StorageService();
-  const pictureStorageService = new StorageService();
-  const loggerService = new LoggerService();
+  const coverStorageService: IStorageService = new S3StorageService();
+  const audioStorageService: IStorageService = new S3StorageService();
+  const songCoverStorageService: IStorageService = new S3StorageService();
+  const playlistCoverStorageService: IStorageService = new S3StorageService();
+  const pictureStorageService: IStorageService = new S3StorageService();
+  const loggerService: ILoggerService = new WinstonLoggerService();
 
   const server = Hapi.server({
     port: process.env.PORT,
@@ -270,7 +278,9 @@ const init = async () => {
   server.ext(
     'onPreResponse',
     (request: Hapi.Request, h: Hapi.ResponseToolkit) => {
-      const { method, path, payload, headers, response } = request;
+      const {
+        method, path, payload, headers, response,
+      } = request;
 
       const statusCode = (response as Boom.Boom)?.isBoom
         ? (response as Boom.Boom).output.statusCode
@@ -290,23 +300,23 @@ const init = async () => {
 
       loggerService.info(
         `
-[RequestID: ${requestId}] ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
-Request Headers: ${JSON.stringify(redact(headers))}
-Request Payload: ${JSON.stringify(redact(payload))}
-Response Body: ${responseBody}
+        [RequestID: ${requestId}] ${method.toUpperCase()} ${path} ${statusCode} - ${duration}ms
+        Request Headers: ${JSON.stringify(redact(headers))}
+        Request Payload: ${JSON.stringify(redact(payload))}
+        Response Body: ${responseBody}
       `.trim(),
       );
 
       if (response instanceof Error) {
         if (response instanceof ClientError) {
-          const statusCode = response.statusCode;
+          const { statusCode: code } = response;
           const newResponse = h.response({
             status: 'fail',
             message: response.message,
           });
-          newResponse.code(statusCode);
+          newResponse.code(code);
 
-          loggerService.warn(`Error ${statusCode}: ${response.message}`);
+          loggerService.warn(`Error ${code}: ${response.message}`);
           return newResponse;
         }
 

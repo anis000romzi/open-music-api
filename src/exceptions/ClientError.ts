@@ -1,4 +1,4 @@
-class ClientError extends Error {
+export class ClientError extends Error {
   statusCode: number;
 
   constructor(message: string, statusCode: number = 400) {
@@ -9,5 +9,3 @@ class ClientError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
-
-export default ClientError;

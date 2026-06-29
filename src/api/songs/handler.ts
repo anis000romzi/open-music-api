@@ -1,12 +1,29 @@
-const autoBind = require('auto-bind');
+import Hapi from '@hapi/hapi';
+import autoBind from 'auto-bind';
+import {
+  AddSongPayload,
+  EditSongPayload,
+  ISongsService,
+  UploadAudioPayload,
+  UploadCoverPayload,
+} from '../../services/interfaces/ISongsService';
+import { IStorageService } from '../../services/interfaces/IStorageService';
+import { IUploadsValidator } from '../../validator/uploads';
+import { ISongsValidator } from '../../validator/songs';
 
-class SongsHandler {
+export class SongsHandler {
+  private _songsService: ISongsService;
+  private _audioStorageService: IStorageService;
+  private _coverStorageService: IStorageService;
+  private _songsValidator: ISongsValidator;
+  private _uploadsValidator: IUploadsValidator;
+
   constructor(
-    songsService,
-    audioStorageService,
-    coverStorageService,
-    songsValidator,
-    uploadsValidator,
+    songsService: ISongsService,
+    audioStorageService: IStorageService,
+    coverStorageService: IStorageService,
+    songsValidator: ISongsValidator,
+    uploadsValidator: IUploadsValidator,
   ) {
     this._songsService = songsService;
     this._audioStorageService = audioStorageService;
@@ -17,11 +34,12 @@ class SongsHandler {
     autoBind(this);
   }
 
-  async postSongHandler(request, h) {
-    this._songsValidator.validateSongPayload(request.payload);
+  async postSongHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const payload = request.payload as AddSongPayload;
+    this._songsValidator.validateSongPayload(payload);
     const { id: credentialId } = request.auth.credentials;
 
-    const songId = await this._songsService.addSong(request.payload, credentialId);
+    const songId = await this._songsService.addSong(payload, credentialId);
 
     const response = h.response({
       status: 'success',
@@ -34,7 +52,7 @@ class SongsHandler {
     return response;
   }
 
-  async getSongsHandler(request) {
+  async getSongsHandler(request: Hapi.Request) {
     const { title, artist, genre } = request.query;
     const songs = await this._songsService.getSongs(title, artist, genre);
 
@@ -79,7 +97,7 @@ class SongsHandler {
     };
   }
 
-  async getLikedSongsHandler(request) {
+  async getLikedSongsHandler(request: Hapi.Request) {
     const { id: credentialId } = request.auth.credentials;
     const songs = await this._songsService.getLikedSongs(credentialId);
 
@@ -113,7 +131,7 @@ class SongsHandler {
     };
   }
 
-  async getOwnedSongsHandler(request) {
+  async getOwnedSongsHandler(request: Hapi.Request) {
     const { id: credentialId } = request.auth.credentials;
     const songs = await this._songsService.getSongsByArtist(credentialId, true);
 
@@ -125,9 +143,12 @@ class SongsHandler {
     };
   }
 
-  async getOwnedSinglesHandler(request) {
+  async getOwnedSinglesHandler(request: Hapi.Request) {
     const { id: credentialId } = request.auth.credentials;
-    const songs = await this._songsService.getSinglesByArtist(credentialId, true);
+    const songs = await this._songsService.getSinglesByArtist(
+      credentialId,
+      true,
+    );
 
     return {
       status: 'success',
@@ -137,7 +158,7 @@ class SongsHandler {
     };
   }
 
-  async getSongByIdHandler(request) {
+  async getSongByIdHandler(request: Hapi.Request) {
     const { id } = request.params;
     const song = await this._songsService.getSongById(id);
     return {
@@ -148,13 +169,14 @@ class SongsHandler {
     };
   }
 
-  async putSongByIdHandler(request) {
-    this._songsValidator.validateSongPayload(request.payload);
+  async putSongByIdHandler(request: Hapi.Request) {
+    const payload = request.payload as EditSongPayload;
+    this._songsValidator.validateSongPayload(payload);
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
     await this._songsService.verifySongArtist(id, credentialId);
-    await this._songsService.editSongById(id, request.payload);
+    await this._songsService.editSongById(id, payload);
 
     return {
       status: 'success',
@@ -162,7 +184,7 @@ class SongsHandler {
     };
   }
 
-  async deleteSongByIdHandler(request) {
+  async deleteSongByIdHandler(request: Hapi.Request) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
@@ -175,7 +197,7 @@ class SongsHandler {
     };
   }
 
-  async postSongLikeHandler(request, h) {
+  async postSongLikeHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
@@ -191,7 +213,7 @@ class SongsHandler {
     return response;
   }
 
-  async deleteSongLikeHandler(request) {
+  async deleteSongLikeHandler(request: Hapi.Request) {
     const { id } = request.params;
     const { id: credentialId } = request.auth.credentials;
 
@@ -203,7 +225,7 @@ class SongsHandler {
     };
   }
 
-  async getSongLikeHandler(request, h) {
+  async getSongLikeHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
     const { id } = request.params;
 
     const likes = await this._songsService.getSongLikes(id);
@@ -218,16 +240,19 @@ class SongsHandler {
     return response;
   }
 
-  async postUploadAudioHandler(request, h) {
+  async postUploadAudioHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
     const { id } = request.params;
-    const { audio } = request.payload;
+    const { audio } = request.payload as UploadAudioPayload;
     const { id: credentialId } = request.auth.credentials;
     this._uploadsValidator.validateAudioHeaders(audio.hapi.headers);
 
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
 
-    const fileLocation = await this._audioStorageService.writeFile(audio, audio.hapi);
+    const fileLocation = await this._audioStorageService.writeFile(
+      audio,
+      audio.hapi,
+    );
 
     await this._songsService.addAudioToSong(id, fileLocation);
 
@@ -243,16 +268,19 @@ class SongsHandler {
     return response;
   }
 
-  async postUploadCoverHandler(request, h) {
+  async postUploadCoverHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
     const { id } = request.params;
-    const { cover } = request.payload;
+    const { cover } = request.payload as UploadCoverPayload;
     const { id: credentialId } = request.auth.credentials;
     this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
 
     await this._songsService.getSongById(id);
     await this._songsService.verifySongArtist(id, credentialId);
 
-    const fileLocation = await this._coverStorageService.writeFile(cover, cover.hapi);
+    const fileLocation = await this._coverStorageService.writeFile(
+      cover,
+      cover.hapi,
+    );
 
     await this._songsService.addCoverToSong(id, fileLocation);
 
@@ -268,5 +296,3 @@ class SongsHandler {
     return response;
   }
 }
-
-module.exports = SongsHandler;

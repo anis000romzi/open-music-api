@@ -1,5 +1,5 @@
-import ClientError from '../ClientError';
-import InvariantError from '../InvariantError';
+import { ClientError } from '../ClientError';
+import { InvariantError } from '../InvariantError';
 
 describe('InvariantError', () => {
   it('should create an error correctly', () => {

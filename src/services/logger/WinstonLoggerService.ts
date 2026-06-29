@@ -1,4 +1,10 @@
-const { createLogger, format, transports } = require('winston');
+import {
+  createLogger,
+  format,
+  transports,
+  Logger,
+} from 'winston';
+import { ILoggerService } from '../interfaces/ILoggerService';
 
 const {
   combine,
@@ -7,17 +13,17 @@ const {
   colorize,
 } = format;
 
-// eslint-disable-next-line no-shadow
-const logFormat = printf(({ level, message, timestamp }) => `${timestamp} [${level}]: ${message}`);
+const logFormat = printf(({ level, message, timestamp: ts }) => (
+  `${ts} [${level}]: ${message}`
+));
 
-class LoggerService {
+export class WinstonLoggerService implements ILoggerService {
+  private logger: Logger;
+
   constructor() {
     this.logger = createLogger({
       level: 'info',
-      format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        logFormat,
-      ),
+      format: combine(timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), logFormat),
       transports: [
         new transports.Console({
           format: combine(
@@ -32,25 +38,23 @@ class LoggerService {
     });
   }
 
-  log(message) {
+  log(message: string): void {
     this.logger.info(message);
   }
 
-  info(message) {
+  info(message: string): void {
     this.logger.info(message);
   }
 
-  warn(message) {
+  warn(message: string): void {
     this.logger.warn(message);
   }
 
-  error(message) {
+  error(message: string): void {
     this.logger.error(message);
   }
 
-  debug(message) {
+  debug(message: string): void {
     this.logger.debug(message);
   }
 }
-
-module.exports = LoggerService;

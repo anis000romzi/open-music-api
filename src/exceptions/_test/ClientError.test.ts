@@ -1,4 +1,4 @@
-import ClientError from "../ClientError";
+import { ClientError } from '../ClientError';
 
 describe('ClientError', () => {
   it('should throw error when directly use it', () => {

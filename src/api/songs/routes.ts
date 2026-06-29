@@ -1,6 +1,8 @@
-const path = require('path');
+import Hapi from '@hapi/hapi';
+import path from 'path';
+import { SongsHandler } from './handler';
 
-const routes = (handler) => [
+export const routes = (handler: SongsHandler): Hapi.ServerRoute[] => [
   {
     method: 'POST',
     path: '/songs',
@@ -130,5 +132,3 @@ const routes = (handler) => [
     },
   },
 ];
-
-module.exports = routes;

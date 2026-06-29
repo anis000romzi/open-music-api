@@ -8,4 +8,8 @@ declare module '@hapi/hapi' {
   interface PluginsStates {
     startTime: number;
   }
+
+  interface AuthCredentials {
+    id: string;
+  }
 }
