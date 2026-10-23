@@ -54,9 +54,10 @@ import { PostgresHistoryService } from './services/postgres/PostgresHistoryServi
 import { IHistoryService } from './services/interfaces/IHistoryService';
 
 // reports
-const reports = require('./api/reports');
-const ReportsService = require('./services/postgres/ReportsService');
-const ReportsValidator = require('./validator/reports');
+import { reports } from './api/reports';
+import { PostgresReportsService } from './services/postgres/PostgresReportsService';
+import { IReportsService } from './services/interfaces/IReportsService';
+import { ReportsValidator } from './validator/reports';
 
 // playlist activities
 const ActivitiesService = require('./services/postgres/ActivitiesService');
@@ -91,7 +92,7 @@ const init = async () => {
   const collaborationsService = new CollaborationsService();
   const genresService: IGenresService = new PostgresGenresService(prisma);
   const historyService: IHistoryService = new PostgresHistoryService(prisma);
-  const reportsService = new ReportsService();
+  const reportsService: IReportsService = new PostgresReportsService(prisma);
   const playlistsService = new PlaylistsService(
     collaborationsService,
     cacheService,
