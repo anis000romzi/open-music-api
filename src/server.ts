@@ -49,8 +49,9 @@ import { PostgresGenresService } from './services/postgres/PostgresGenresService
 import { IGenresService } from './services/interfaces/IGenresService';
 
 // history
-const history = require('./api/history');
-const HistoryService = require('./services/postgres/HistoryService');
+import { history } from './api/history';
+import { PostgresHistoryService } from './services/postgres/PostgresHistoryService';
+import { IHistoryService } from './services/interfaces/IHistoryService';
 
 // reports
 const reports = require('./api/reports');
@@ -89,7 +90,7 @@ const init = async () => {
   const songsService: ISongsService = new PostgresSongsService(prisma, cacheService);
   const collaborationsService = new CollaborationsService();
   const genresService: IGenresService = new PostgresGenresService(prisma);
-  const historyService = new HistoryService();
+  const historyService: IHistoryService = new PostgresHistoryService(prisma);
   const reportsService = new ReportsService();
   const playlistsService = new PlaylistsService(
     collaborationsService,

@@ -1,4 +1,7 @@
-const routes = (handler) => [
+import Hapi from '@hapi/hapi';
+import { HistoryHandler } from './handler';
+
+export const routes = (handler: HistoryHandler): Hapi.ServerRoute[] => [
   {
     method: 'POST',
     path: '/history',
@@ -16,5 +19,3 @@ const routes = (handler) => [
     },
   },
 ];
-
-module.exports = routes;
