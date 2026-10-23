@@ -44,8 +44,9 @@ const CollaborationsService = require('./services/postgres/CollaborationsService
 const CollaborationsValidator = require('./validator/collaborations');
 
 // genres
-const genres = require('./api/genres');
-const GenresService = require('./services/postgres/GenresService');
+import { genres } from './api/genres';
+import { PostgresGenresService } from './services/postgres/PostgresGenresService';
+import { IGenresService } from './services/interfaces/IGenresService';
 
 // history
 const history = require('./api/history');
@@ -87,7 +88,7 @@ const init = async () => {
   );
   const songsService: ISongsService = new PostgresSongsService(prisma, cacheService);
   const collaborationsService = new CollaborationsService();
-  const genresService = new GenresService();
+  const genresService: IGenresService = new PostgresGenresService(prisma);
   const historyService = new HistoryService();
   const reportsService = new ReportsService();
   const playlistsService = new PlaylistsService(

@@ -1,7 +1,10 @@
-const autoBind = require('auto-bind');
+import autoBind from 'auto-bind';
+import { IGenresService } from '../../services/interfaces/IGenresService';
 
-class GenresHandler {
-  constructor(genresService) {
+export class GenresHandler {
+  private _genresService: IGenresService;
+
+  constructor(genresService: IGenresService) {
     this._genresService = genresService;
 
     autoBind(this);
@@ -18,5 +21,3 @@ class GenresHandler {
     };
   }
 }
-
-module.exports = GenresHandler;
