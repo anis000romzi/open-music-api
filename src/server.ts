@@ -23,9 +23,10 @@ import { ISongsService } from './services/interfaces/ISongsService';
 import { SongsValidator } from './validator/songs';
 
 // playlists
-const playlists = require('./api/playlists');
-const PlaylistsService = require('./services/postgres/PlaylistsService');
-const PlaylistsValidator = require('./validator/playlists');
+import { playlists } from './api/playlists';
+import { PostgresPlaylistsService } from './services/postgres/PostgresPlaylistsService';
+import { IPlaylistsService } from './services/interfaces/IPlaylistsService';
+import { PlaylistsValidator } from './validator/playlists';
 
 // users
 const users = require('./api/users');
@@ -60,7 +61,8 @@ import { IReportsService } from './services/interfaces/IReportsService';
 import { ReportsValidator } from './validator/reports';
 
 // playlist activities
-const ActivitiesService = require('./services/postgres/ActivitiesService');
+import { PostgresActivitiesService } from './services/postgres/PostgresActivitiesService';
+import { IActivitiesService } from './services/interfaces/IActivitiesService';
 
 // message broker
 const ProducerService = require('./services/rabbitmq/ProducerService');
@@ -93,13 +95,14 @@ const init = async () => {
   const genresService: IGenresService = new PostgresGenresService(prisma);
   const historyService: IHistoryService = new PostgresHistoryService(prisma);
   const reportsService: IReportsService = new PostgresReportsService(prisma);
-  const playlistsService = new PlaylistsService(
+  const playlistsService: IPlaylistsService = new PostgresPlaylistsService(
+    prisma,
     collaborationsService,
     cacheService,
   );
   const usersService = new UsersService(cacheService);
   const authenticationsService = new AuthenticationsService();
-  const activitiesService = new ActivitiesService();
+  const activitiesService: IActivitiesService = new PostgresActivitiesService(prisma);
   const coverStorageService: IStorageService = new S3StorageService();
   const audioStorageService: IStorageService = new S3StorageService();
   const songCoverStorageService: IStorageService = new S3StorageService();

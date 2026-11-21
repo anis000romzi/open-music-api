@@ -1,13 +1,36 @@
-const autoBind = require('auto-bind');
+import Hapi from '@hapi/hapi';
+import autoBind from 'auto-bind';
+import {
+  IPlaylistsService,
+  Playlist,
+  PlaylistPayload,
+  PlaylistSongPayload,
+  UploadCoverPayload,
+} from '../../services/interfaces/IPlaylistsService';
+import { ISongsService } from '../../services/interfaces/ISongsService';
+import { IActivitiesService } from '../../services/interfaces/IActivitiesService';
+import { IStorageService } from '../../services/interfaces/IStorageService';
+import { IPlaylistsValidator } from '../../validator/playlists';
+import { IUploadsValidator } from '../../validator/uploads';
 
-class PlaylistsHandler {
+type IdParams = { id: string };
+type Credentials = { id: string };
+
+export class PlaylistsHandler {
+  private _playlistsService: IPlaylistsService;
+  private _songsService: ISongsService;
+  private _activitiesService: IActivitiesService;
+  private _coverStorageService: IStorageService;
+  private _playlistsValidator: IPlaylistsValidator;
+  private _uploadsValidator: IUploadsValidator;
+
   constructor(
-    playlistsService,
-    songsService,
-    activitiesService,
-    coverStorageService,
-    playlistsValidator,
-    uploadsValidator,
+    playlistsService: IPlaylistsService,
+    songsService: ISongsService,
+    activitiesService: IActivitiesService,
+    coverStorageService: IStorageService,
+    playlistsValidator: IPlaylistsValidator,
+    uploadsValidator: IUploadsValidator,
   ) {
     this._playlistsService = playlistsService;
     this._songsService = songsService;
@@ -19,10 +42,21 @@ class PlaylistsHandler {
     autoBind(this);
   }
 
-  async postPlaylistHandler(request, h) {
-    this._playlistsValidator.validatePostPlaylistPayload(request.payload);
-    const { name, isPublic } = request.payload;
-    const { id: owner } = request.auth.credentials;
+  private async withSongIds(playlists: Playlist[]) {
+    return Promise.all(playlists.map(async (playlist) => {
+      const songs = await this._songsService.getSongsByPlaylist(playlist.id);
+      return {
+        ...playlist,
+        songs: songs.map((song) => song.id),
+      };
+    }));
+  }
+
+  async postPlaylistHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const payload = request.payload as PlaylistPayload;
+    this._playlistsValidator.validatePostPlaylistPayload(payload);
+    const { name, isPublic } = payload;
+    const { id: owner } = request.auth.credentials as Credentials;
 
     const playlistId = await this._playlistsService.addPlaylist({ name, owner, isPublic });
 
@@ -36,29 +70,20 @@ class PlaylistsHandler {
     return response;
   }
 
-  async getPlaylistsHandler(request) {
-    const { id: credentialId } = request.auth.credentials;
+  async getPlaylistsHandler(request: Hapi.Request) {
+    const { id: credentialId } = request.auth.credentials as Credentials;
     const playlists = await this._playlistsService.getPlaylists(credentialId);
-
-    const mappedPlaylists = await Promise.all(playlists.map(async (playlist) => {
-      const songs = await this._songsService.getSongsByPlaylist(playlist.id);
-      const mappedSongs = songs.map((song) => song.id);
-      return {
-        ...playlist,
-        songs: mappedSongs,
-      };
-    }));
 
     return {
       status: 'success',
       data: {
-        playlists: mappedPlaylists,
+        playlists: await this.withSongIds(playlists),
       },
     };
   }
 
-  async searchPlaylistsHandler(request) {
-    const { name, username } = request.query;
+  async searchPlaylistsHandler(request: Hapi.Request) {
+    const { name, username } = request.query as { name?: string; username?: string };
     const playlists = await this._playlistsService.searchPlaylists(name, username);
 
     return {
@@ -69,8 +94,8 @@ class PlaylistsHandler {
     };
   }
 
-  async getLikedPlaylistsHandler(request) {
-    const { id: credentialId } = request.auth.credentials;
+  async getLikedPlaylistsHandler(request: Hapi.Request) {
+    const { id: credentialId } = request.auth.credentials as Credentials;
     const playlists = await this._playlistsService.getLikedPlaylists(credentialId);
 
     return {
@@ -84,28 +109,20 @@ class PlaylistsHandler {
   async getPopularPlaylistsHandler() {
     const playlists = await this._playlistsService.getPopularPlaylists();
 
-    const mappedPlaylists = await Promise.all(playlists.map(async (playlist) => {
-      const songs = await this._songsService.getSongsByPlaylist(playlist.id);
-      const mappedSongs = songs.map((song) => song.id);
-      return {
-        ...playlist,
-        songs: mappedSongs,
-      };
-    }));
-
     return {
       status: 'success',
       data: {
-        playlists: mappedPlaylists,
+        playlists: await this.withSongIds(playlists),
       },
     };
   }
 
-  async putPlaylistByIdHandler(request) {
-    this._playlistsValidator.validatePostPlaylistPayload(request.payload);
-    const { name, isPublic } = request.payload;
-    const { id } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+  async putPlaylistByIdHandler(request: Hapi.Request) {
+    const payload = request.payload as PlaylistPayload;
+    this._playlistsValidator.validatePostPlaylistPayload(payload);
+    const { name, isPublic } = payload;
+    const { id } = request.params as IdParams;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
     await this._playlistsService.editPlaylistById({ id, name, isPublic });
@@ -116,9 +133,9 @@ class PlaylistsHandler {
     };
   }
 
-  async deletePlaylistByIdHandler(request) {
-    const { id } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+  async deletePlaylistByIdHandler(request: Hapi.Request) {
+    const { id } = request.params as IdParams;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
     await this._playlistsService.deletePlaylistById(id);
@@ -129,10 +146,10 @@ class PlaylistsHandler {
     };
   }
 
-  async postUploadCoverHandler(request, h) {
-    const { id } = request.params;
-    const { cover } = request.payload;
-    const { id: credentialId } = request.auth.credentials;
+  async postUploadCoverHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const { id } = request.params as IdParams;
+    const { cover } = request.payload as UploadCoverPayload;
+    const { id: credentialId } = request.auth.credentials as Credentials;
     this._uploadsValidator.validateImageHeaders(cover.hapi.headers);
 
     await this._playlistsService.verifyPlaylistOwner(id, credentialId);
@@ -153,11 +170,12 @@ class PlaylistsHandler {
     return response;
   }
 
-  async postSongToPlaylistHandler(request, h) {
-    this._playlistsValidator.validatePostSongToPlaylistPayload(request.payload);
-    const { id } = request.params;
-    const { songId } = request.payload;
-    const { id: credentialId } = request.auth.credentials;
+  async postSongToPlaylistHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const payload = request.payload as PlaylistSongPayload;
+    this._playlistsValidator.validatePostSongToPlaylistPayload(payload);
+    const { id } = request.params as IdParams;
+    const { songId } = payload;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistAccess(id, credentialId);
     await this._songsService.getSongById(songId);
@@ -172,9 +190,10 @@ class PlaylistsHandler {
     return response;
   }
 
-  async getPlaylistByIdHandler(request) {
-    const { id: playlistId } = request.params;
-    const { id: credentialId } = request.auth.credentials || {};
+  async getPlaylistByIdHandler(request: Hapi.Request) {
+    const { id: playlistId } = request.params as IdParams;
+    // Route uses optional auth, so credentials may be missing.
+    const credentialId = (request.auth.credentials as Credentials | null)?.id;
 
     const {
       id,
@@ -196,10 +215,9 @@ class PlaylistsHandler {
 
     const mappedSongs = await Promise.all(songs.map(async (song) => {
       const likes = await this._songsService.getSongLikes(song.id);
-      const mappedLikes = likes.result.map((like) => like.id);
       return {
         ...song,
-        likes: mappedLikes,
+        likes: likes.result.map((like) => like.id),
       };
     }));
 
@@ -221,9 +239,9 @@ class PlaylistsHandler {
     };
   }
 
-  async postPlaylistLikeHandler(request, h) {
-    const { id } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+  async postPlaylistLikeHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const { id } = request.params as IdParams;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.getPlaylistById(id);
     await this._playlistsService.verifyPlaylistVisibility(id, 'public');
@@ -238,9 +256,9 @@ class PlaylistsHandler {
     return response;
   }
 
-  async deletePlaylistLikeHandler(request) {
-    const { id } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+  async deletePlaylistLikeHandler(request: Hapi.Request) {
+    const { id } = request.params as IdParams;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistVisibility(id, 'public');
     await this._playlistsService.deleteLikeFromPlaylist(credentialId, id);
@@ -251,8 +269,8 @@ class PlaylistsHandler {
     };
   }
 
-  async getPlaylistLikeHandler(request, h) {
-    const { id } = request.params;
+  async getPlaylistLikeHandler(request: Hapi.Request, h: Hapi.ResponseToolkit) {
+    const { id } = request.params as IdParams;
 
     const likes = await this._playlistsService.getPlaylistLikes(id);
 
@@ -270,11 +288,12 @@ class PlaylistsHandler {
     return response;
   }
 
-  async deleteSongFromPlaylistHandler(request) {
-    this._playlistsValidator.validateDeleteSongFromPlaylistPayload(request.payload);
-    const { id } = request.params;
-    const { songId } = request.payload;
-    const { id: credentialId } = request.auth.credentials;
+  async deleteSongFromPlaylistHandler(request: Hapi.Request) {
+    const payload = request.payload as PlaylistSongPayload;
+    this._playlistsValidator.validateDeleteSongFromPlaylistPayload(payload);
+    const { id } = request.params as IdParams;
+    const { songId } = payload;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistAccess(id, credentialId);
     await this._songsService.deleteSongFromPlaylist(id, songId);
@@ -286,9 +305,9 @@ class PlaylistsHandler {
     };
   }
 
-  async getPlaylistActivitiesHandler(request) {
-    const { id } = request.params;
-    const { id: credentialId } = request.auth.credentials;
+  async getPlaylistActivitiesHandler(request: Hapi.Request) {
+    const { id } = request.params as IdParams;
+    const { id: credentialId } = request.auth.credentials as Credentials;
 
     await this._playlistsService.verifyPlaylistAccess(id, credentialId);
     const activities = await this._activitiesService.getActivities(id);
@@ -302,5 +321,3 @@ class PlaylistsHandler {
     };
   }
 }
-
-module.exports = PlaylistsHandler;
