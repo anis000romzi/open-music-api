@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import Hapi from '@hapi/hapi';
 import Boom from '@hapi/boom';
-import Jwt from '@hapi/jwt';
+import Jwt, { HapiJwt } from '@hapi/jwt';
 import Inert from '@hapi/inert';
 import Vision from '@hapi/vision';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,7 +39,7 @@ import { UsersValidator } from './validator/users';
 import { authentications } from './api/authentications';
 import { PostgresAuthenticationsService } from './services/postgres/PostgresAuthenticationsService';
 import { IAuthenticationsService } from './services/interfaces/IAuthenticationsService';
-import { TokenManager } from './tokenize/TokenManager';
+import { TokenManager, TokenPayload } from './tokenize/TokenManager';
 import { AuthenticationsValidator } from './validator/authentications';
 
 // collaborations
@@ -152,6 +152,9 @@ const init = async () => {
     },
   ]);
 
+  // Access tokens carry `{ id }` (see TokenManager.generateAccessToken).
+  type AccessTokenArtifacts = HapiJwt.Artifacts<{ JwtPayload: TokenPayload }>;
+
   const findTokenUser = async (userId: string) => {
     try {
       return await usersService.getUserById(userId);
@@ -171,7 +174,7 @@ const init = async () => {
       sub: false,
       maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
-    validate: async (artifacts) => {
+    validate: async (artifacts: AccessTokenArtifacts) => {
       const user = await findTokenUser(artifacts.decoded.payload.id);
 
       if (!user || !user.is_active || user.is_banned === true) {
@@ -198,7 +201,7 @@ const init = async () => {
     // Same as openmusic_jwt but lets unverified (inactive) users through, for
     // /users/me and changing the email before verification. Banned users are
     // still rejected.
-    validate: async (artifacts) => {
+    validate: async (artifacts: AccessTokenArtifacts) => {
       const user = await findTokenUser(artifacts.decoded.payload.id);
 
       if (!user || user.is_banned === true) {
@@ -302,7 +305,7 @@ const init = async () => {
   server.route({
     method: 'GET',
     path: '/docs',
-    handler: (request, h) => h.file('./public/rapidoc.html'),
+    handler: (_request, h) => h.file('./public/rapidoc.html'),
   });
 
   server.ext('onRequest', (request, h) => {
@@ -374,7 +377,7 @@ const init = async () => {
     },
   );
 
-  const routes = server.table() as any[];
+  const routes = server.table();
   const grouped: Record<string, Array<{ method: string; path: string }>> = {};
 
   routes.forEach((route) => {
@@ -391,11 +394,9 @@ const init = async () => {
 
   Object.entries(grouped).forEach(([pluginName, pluginRoutes]) => {
     loggerService.info(`📦 Plugin: ${pluginName}`);
-    (pluginRoutes as Array<{ method: string; path: string }>).forEach(
-      (route) => {
-        loggerService.info(`[${route.method}] ${route.path}`);
-      },
-    );
+    pluginRoutes.forEach((route) => {
+      loggerService.info(`[${route.method}] ${route.path}`);
+    });
   });
 
   await server.start();
