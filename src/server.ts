@@ -40,9 +40,10 @@ const TokenManager = require('./tokenize/TokenManager');
 const AuthenticationsValidator = require('./validator/authentications');
 
 // collaborations
-const collaborations = require('./api/collaborations');
-const CollaborationsService = require('./services/postgres/CollaborationsService');
-const CollaborationsValidator = require('./validator/collaborations');
+import { collaborations } from './api/collaborations';
+import { PostgresCollaborationsService } from './services/postgres/PostgresCollaborationsService';
+import { ICollaborationsService } from './services/interfaces/ICollaborationsService';
+import { CollaborationsValidator } from './validator/collaborations';
 
 // genres
 import { genres } from './api/genres';
@@ -91,7 +92,7 @@ const init = async () => {
     cacheService,
   );
   const songsService: ISongsService = new PostgresSongsService(prisma, cacheService);
-  const collaborationsService = new CollaborationsService();
+  const collaborationsService: ICollaborationsService = new PostgresCollaborationsService(prisma);
   const genresService: IGenresService = new PostgresGenresService(prisma);
   const historyService: IHistoryService = new PostgresHistoryService(prisma);
   const reportsService: IReportsService = new PostgresReportsService(prisma);
