@@ -124,9 +124,12 @@ export class PostgresAlbumsService implements IAlbumsService {
     };
   }
 
-  async getAlbumsByArtist(artistId: string): Promise<Album> {
-    const album = await this._prisma.albums.findFirst({
-      where: { artist: artistId },
+  async getAlbumsByArtist(artistId: string): Promise<Album[]> {
+    const albums = await this._prisma.albums.findMany({
+      where: {
+        artist: artistId,
+        users: { is_banned: false },
+      },
       select: {
         id: true,
         name: true,
@@ -139,18 +142,14 @@ export class PostgresAlbumsService implements IAlbumsService {
       },
     });
 
-    if (!album) {
-      throw new NotFoundError('Album not found');
-    }
-
-    return {
+    return albums.map((album) => ({
       id: album.id,
       name: album.name,
       year: album.year,
       artist_id: album.artist,
       artist: album.users?.fullname ?? null,
       cover: album.cover,
-    };
+    }));
   }
 
   async getPopularAlbums(): Promise<PopularAlbum[]> {

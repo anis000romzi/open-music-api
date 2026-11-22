@@ -7,6 +7,7 @@ import Inert from '@hapi/inert';
 import Vision from '@hapi/vision';
 import { v4 as uuidv4 } from 'uuid';
 import { ClientError } from './exceptions/ClientError';
+import { NotFoundError } from './exceptions/NotFoundError';
 
 import * as Swagger from 'hapi-swagger';
 
@@ -29,15 +30,17 @@ import { IPlaylistsService } from './services/interfaces/IPlaylistsService';
 import { PlaylistsValidator } from './validator/playlists';
 
 // users
-const users = require('./api/users');
-const UsersService = require('./services/postgres/UsersService');
-const UsersValidator = require('./validator/users');
+import { users } from './api/users';
+import { PostgresUsersService } from './services/postgres/PostgresUsersService';
+import { IUsersService } from './services/interfaces/IUsersService';
+import { UsersValidator } from './validator/users';
 
 // authentications
-const authentications = require('./api/authentications');
-const AuthenticationsService = require('./services/postgres/AuthenticationsService');
-const TokenManager = require('./tokenize/TokenManager');
-const AuthenticationsValidator = require('./validator/authentications');
+import { authentications } from './api/authentications';
+import { PostgresAuthenticationsService } from './services/postgres/PostgresAuthenticationsService';
+import { IAuthenticationsService } from './services/interfaces/IAuthenticationsService';
+import { TokenManager } from './tokenize/TokenManager';
+import { AuthenticationsValidator } from './validator/authentications';
 
 // collaborations
 import { collaborations } from './api/collaborations';
@@ -66,7 +69,8 @@ import { PostgresActivitiesService } from './services/postgres/PostgresActivitie
 import { IActivitiesService } from './services/interfaces/IActivitiesService';
 
 // message broker
-const ProducerService = require('./services/rabbitmq/ProducerService');
+import { RabbitMQProducerService } from './services/rabbitmq/RabbitMQProducerService';
+import { IProducerService } from './services/interfaces/IProducerService';
 
 // uploads
 import { IStorageService } from './services/interfaces/IStorageService';
@@ -101,8 +105,11 @@ const init = async () => {
     collaborationsService,
     cacheService,
   );
-  const usersService = new UsersService(cacheService);
-  const authenticationsService = new AuthenticationsService();
+  const usersService: IUsersService = new PostgresUsersService(prisma, cacheService);
+  const authenticationsService: IAuthenticationsService = new PostgresAuthenticationsService(
+    prisma,
+  );
+  const producerService: IProducerService = new RabbitMQProducerService();
   const activitiesService: IActivitiesService = new PostgresActivitiesService(prisma);
   const coverStorageService: IStorageService = new S3StorageService();
   const audioStorageService: IStorageService = new S3StorageService();
@@ -145,6 +152,17 @@ const init = async () => {
     },
   ]);
 
+  const findTokenUser = async (userId: string) => {
+    try {
+      return await usersService.getUserById(userId);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return null;
+      }
+      throw error;
+    }
+  };
+
   server.auth.strategy('openmusic_jwt', 'jwt', {
     keys: process.env.ACCESS_TOKEN_KEY,
     verify: {
@@ -154,9 +172,9 @@ const init = async () => {
       maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
     validate: async (artifacts) => {
-      const user = await usersService.getUserById(artifacts.decoded.payload.id);
+      const user = await findTokenUser(artifacts.decoded.payload.id);
 
-      if (!user || !user.is_active) {
+      if (!user || !user.is_active || user.is_banned === true) {
         return { isValid: false };
       }
 
@@ -177,12 +195,23 @@ const init = async () => {
       sub: false,
       maxAgeSec: process.env.ACCESS_TOKEN_AGE,
     },
-    validate: async (artifacts) => ({
-      isValid: true,
-      credentials: {
-        id: artifacts.decoded.payload.id,
-      },
-    }),
+    // Same as openmusic_jwt but lets unverified (inactive) users through, for
+    // /users/me and changing the email before verification. Banned users are
+    // still rejected.
+    validate: async (artifacts) => {
+      const user = await findTokenUser(artifacts.decoded.payload.id);
+
+      if (!user || user.is_banned === true) {
+        return { isValid: false };
+      }
+
+      return {
+        isValid: true,
+        credentials: {
+          id: artifacts.decoded.payload.id,
+        },
+      };
+    },
   });
 
   await server.register([
@@ -233,7 +262,7 @@ const init = async () => {
       options: {
         cacheService,
         authenticationsService,
-        producerService: ProducerService,
+        producerService,
         usersService,
         tokenManager: TokenManager,
         validator: AuthenticationsValidator,

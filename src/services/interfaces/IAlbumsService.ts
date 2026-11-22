@@ -36,7 +36,7 @@ export interface IAlbumsService {
   addAlbum(payload: AddAlbumPayload, artist: string): Promise<string>;
   getAlbums(name?: string, artist?: string): Promise<Album[]>;
   getAlbumById(albumId: string): Promise<Album>;
-  getAlbumsByArtist(albumdId: string): Promise<Album>;
+  getAlbumsByArtist(artistId: string): Promise<Album[]>;
   getPopularAlbums(): Promise<PopularAlbum[]>;
   getLikedAlbums(userId: string): Promise<Album[]>;
   editAlbumById(id: string, payload: EditAlbumPayload): Promise<Album>;
