@@ -1,7 +1,7 @@
 
 # My Free Tunes API
 
-A backend application for My Free Tuns App
+A backend application for My Free Tunes App
 
 
 ## Installation
