@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model albums {
+  id               String             @id @db.VarChar(50)
+  name             String
+  year             Int
+  artist           String             @db.VarChar(50)
+  cover            String?
+  created_at       DateTime?          @db.Timestamp(6)
+  updated_at       DateTime?          @db.Timestamp(6)
+  users            users              @relation(fields: [artist], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_albums.artist_users.id")
+  songs            songs[]
+  user_album_likes user_album_likes[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model authentications {
+  token String
+
+  @@ignore
+}
+
+model collaborations {
+  id          String    @id @db.VarChar(50)
+  playlist_id String    @db.VarChar(50)
+  user_id     String    @db.VarChar(50)
+  playlists   playlists @relation(fields: [playlist_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_collaborations.playlist_id_playlists.id")
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_collaborations.user_id_users.id")
+
+  @@unique([playlist_id, user_id], map: "unique_playlist_id_and_user_id")
+}
+
+model follower_artist {
+  id                                     String @id @db.VarChar(50)
+  user_id                                String @db.VarChar(50)
+  artist_id                              String @db.VarChar(50)
+  users_follower_artist_artist_idTousers users  @relation("follower_artist_artist_idTousers", fields: [artist_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_follower_artist.artist_id_users.id")
+  users_follower_artist_user_idTousers   users  @relation("follower_artist_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_follower_artist.user_id_users.id")
+
+  @@unique([user_id, artist_id], map: "unique_user_id_and_artist_id")
+}
+
+model genres {
+  id    String  @id @db.VarChar(50)
+  name  String
+  songs songs[]
+}
+
+model history {
+  id      String @id @db.VarChar(50)
+  user_id String @db.VarChar(50)
+  song_id String @db.VarChar(50)
+  time    String
+  songs   songs  @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_history.song_id_songs.id")
+  users   users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_history.user_id_users.id")
+
+  @@unique([user_id, song_id], map: "unique_user_id_and_song_id_history")
+}
+
+model pgmigrations {
+  id     Int      @id @default(autoincrement())
+  name   String   @db.VarChar(255)
+  run_on DateTime @db.Timestamp(6)
+}
+
+model playlist_song_activities {
+  id          String    @id @db.VarChar(50)
+  playlist_id String    @db.VarChar(50)
+  song_id     String    @db.VarChar(50)
+  user_id     String    @db.VarChar(50)
+  action      String
+  time        String
+  playlists   playlists @relation(fields: [playlist_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_playlist_song_activities.playlist_id_playlists.id")
+}
+
+model playlist_songs {
+  id          String    @id @db.VarChar(50)
+  playlist_id String    @db.VarChar(50)
+  song_id     String    @db.VarChar(50)
+  playlists   playlists @relation(fields: [playlist_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_playlist_songs.playlist_id_playlists.id")
+  songs       songs     @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_playlist_songs.song_id_songs.id")
+
+  @@unique([playlist_id, song_id], map: "unique_playlist_id_and_song_id")
+}
+
+model playlists {
+  id                       String                     @id @db.VarChar(50)
+  name                     String
+  owner                    String                     @db.VarChar(50)
+  created_at               DateTime?                  @db.Timestamp(6)
+  updated_at               DateTime?                  @db.Timestamp(6)
+  cover                    String?
+  is_public                Boolean?
+  collaborations           collaborations[]
+  playlist_song_activities playlist_song_activities[]
+  playlist_songs           playlist_songs[]
+  users                    users                      @relation(fields: [owner], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_playlists.owner_users.id")
+  user_playlist_likes      user_playlist_likes[]
+}
+
+model posts {
+  id         String    @id @db.VarChar(50)
+  artist     String    @db.VarChar(50)
+  content    String
+  image      String?
+  song_id    String?   @db.VarChar(50)
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  users      users     @relation(fields: [artist], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_posts.artist_users.id")
+}
+
+model reports {
+  id            String        @id @db.VarChar(50)
+  reporter      String        @db.VarChar(50)
+  song_id       String        @db.VarChar(50)
+  report_reason String
+  report_detail String
+  status        report_status @default(pending)
+  created_at    DateTime?     @db.Timestamp(6)
+  updated_at    DateTime?     @db.Timestamp(6)
+  users         users         @relation(fields: [reporter], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reports.reporter_users.id")
+  songs         songs         @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reports.song_id_songs.id")
+}
+
+model songs {
+  id              String            @id @db.VarChar(50)
+  title           String
+  year            Int
+  genre           String
+  artist          String            @db.VarChar(50)
+  duration        Int
+  album_id        String?           @db.VarChar(50)
+  audio           String?
+  created_at      DateTime?         @db.Timestamp(6)
+  updated_at      DateTime?         @db.Timestamp(6)
+  cover           String?
+  listened        Int?              @default(0)
+  is_removed      Boolean?          @default(false)
+  history         history[]
+  playlist_songs  playlist_songs[]
+  reports         reports[]
+  albums          albums?           @relation(fields: [album_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_songs.album_id_albums.id")
+  users           users             @relation(fields: [artist], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_songs.artist_users.id")
+  genres          genres            @relation(fields: [genre], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_songs.genre_genres.id")
+  user_song_likes user_song_likes[]
+}
+
+model user_album_likes {
+  id       String @id @db.VarChar(50)
+  user_id  String @db.VarChar(50)
+  album_id String @db.VarChar(50)
+  albums   albums @relation(fields: [album_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_album_likes.album_id_albums.id")
+  users    users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_album_likes.user_id_users.id")
+
+  @@unique([user_id, album_id], map: "unique_user_id_and_album_id")
+}
+
+model user_playlist_likes {
+  id          String    @id @db.VarChar(50)
+  user_id     String    @db.VarChar(50)
+  playlist_id String    @db.VarChar(50)
+  playlists   playlists @relation(fields: [playlist_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_playlist_likes.playlist_id_playlists.id")
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_playlist_likes.user_id_users.id")
+
+  @@unique([user_id, playlist_id], map: "unique_user_id_and_playlist_id")
+}
+
+model user_song_likes {
+  id      String @id @db.VarChar(50)
+  user_id String @db.VarChar(50)
+  song_id String @db.VarChar(50)
+  songs   songs  @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_song_likes.song_id_songs.id")
+  users   users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_song_likes.user_id_users.id")
+
+  @@unique([user_id, song_id], map: "unique_user_id_and_song_id")
+}
+
+model users {
+  id                                               String                @id @db.VarChar(50)
+  email                                            String                @unique
+  username                                         String                @unique @db.VarChar(50)
+  password                                         String
+  fullname                                         String
+  is_active                                        Boolean
+  created_at                                       DateTime?             @db.Timestamp(6)
+  updated_at                                       DateTime?             @db.Timestamp(6)
+  description                                      String?
+  picture                                          String?
+  is_banned                                        Boolean?              @default(false)
+  albums                                           albums[]
+  collaborations                                   collaborations[]
+  follower_artist_follower_artist_artist_idTousers follower_artist[]     @relation("follower_artist_artist_idTousers")
+  follower_artist_follower_artist_user_idTousers   follower_artist[]     @relation("follower_artist_user_idTousers")
+  history                                          history[]
+  playlists                                        playlists[]
+  posts                                            posts[]
+  reports                                          reports[]
+  songs                                            songs[]
+  user_album_likes                                 user_album_likes[]
+  user_playlist_likes                              user_playlist_likes[]
+  user_song_likes                                  user_song_likes[]
+}
+
+enum report_status {
+  pending
+  reviewed
+  resolved
+}

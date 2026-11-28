@@ -39,6 +39,7 @@ jobs:
     - name: npm install migrate and test
       run: |
         npm install
+        npx prisma generate
         npm run migrate up
         npm run test
       env:
@@ -50,6 +51,14 @@ jobs:
         PGUSER: anis
         PGPASSWORD: 15200315
         PGDATABASE: openmusic_test
+        # Jest sets NODE_ENV=test, so pool.ts reads PG*_TEST and Prisma reads DATABASE_URL_TEST
+        PGHOST_TEST: localhost
+        PGPORT_TEST: 5432
+        PGUSER_TEST: anis
+        PGPASSWORD_TEST: 15200315
+        PGDATABASE_TEST: openmusic_test
+        DATABASE_URL: postgresql://anis:15200315@localhost:5432/openmusic_test
+        DATABASE_URL_TEST: postgresql://anis:15200315@localhost:5432/openmusic_test
         ACCESS_TOKEN_KEY: secret
         REFRESH_TOKEN_KEY: terces
         ACCESS_TOKEN_AGE: 3600
