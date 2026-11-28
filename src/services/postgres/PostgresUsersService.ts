@@ -48,6 +48,12 @@ export class PostgresUsersService implements IUsersService {
   async addUser({
     email, username, password, fullname,
   }: RegisterUserPayload): Promise<string> {
+    // The validator normally rejects this first, but an undefined value would
+    // otherwise reach Prisma's findUnique and surface as a 500.
+    if (!email || !username || !password || !fullname) {
+      throw new InvariantError('Failed registering user. Payload is incomplete');
+    }
+
     await this.verifyNewUsername(username);
     await this.verifyNewEmail(email);
 

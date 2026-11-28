@@ -13,6 +13,10 @@ import { AuthorizationError } from '../../exceptions/AuthorizationError';
 import { InvariantError } from '../../exceptions/InvariantError';
 import { NotFoundError } from '../../exceptions/NotFoundError';
 
+const isRecordNotFound = (error: unknown) => (
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025'
+);
+
 export class PostgresAlbumsService implements IAlbumsService {
   private _prisma: PrismaClient;
   private _cacheService: ICacheService;
@@ -253,6 +257,9 @@ export class PostgresAlbumsService implements IAlbumsService {
         cover: album.cover,
       };
     } catch (error) {
+      if (isRecordNotFound(error)) {
+        throw new NotFoundError('Failed to update album. Id not found');
+      }
       console.error(error);
       throw new InvariantError('Failed to update album');
     }
@@ -309,6 +316,9 @@ export class PostgresAlbumsService implements IAlbumsService {
 
       return result.id;
     } catch (error) {
+      if (isRecordNotFound(error)) {
+        throw new NotFoundError('Failed to delete album. Id not found');
+      }
       console.error(error);
       throw new InvariantError('Failed to delete album');
     }
