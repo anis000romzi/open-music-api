@@ -12,6 +12,7 @@ const createService = () => new PostgresAlbumsService(prisma, createMockCacheSer
 
 describe('PostgresAlbumsService', () => {
   afterEach(async () => {
+    jest.restoreAllMocks();
     await AlbumsTableTestHelper.cleanTable();
     await UsersTableTestHelper.cleanTable();
   });
@@ -26,10 +27,13 @@ describe('PostgresAlbumsService', () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       const albumsService = createService();
+      // addAlbum logs the underlying Prisma error; keep it out of the test output
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       // Action & Assert
       // @ts-expect-error: year is intentionally missing
       await expect(albumsService.addAlbum({ name: 'Album testing' }, 'user-123')).rejects.toThrow(InvariantError);
+      expect(consoleErrorSpy).toHaveBeenCalled();
     });
 
     it('should persist after adding a album', async () => {
