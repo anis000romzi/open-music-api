@@ -1,22 +1,23 @@
-/* eslint-disable no-undef */
-const InvariantError = require('../../../exceptions/InvariantError');
-const AuthenticationsTableTestHelper = require('../../../../tests/AuthenticationsTableTestHelper');
-const pool = require('../pool');
-const AuthenticationsService = require('../AuthenticationsService');
+import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper';
+import { InvariantError } from '../../../exceptions/InvariantError';
+import prisma from '../../../helpers/prisma';
+import pool from '../pool';
+import { PostgresAuthenticationsService } from '../PostgresAuthenticationsService';
 
-describe('AuthenticationsService', () => {
+describe('PostgresAuthenticationsService', () => {
   afterEach(async () => {
     await AuthenticationsTableTestHelper.cleanTable();
   });
 
   afterAll(async () => {
     await pool.end();
+    await prisma.$disconnect();
   });
 
   describe('addRefreshToken function', () => {
     it('should add token to database', async () => {
       // Arrange
-      const authenticationsService = new AuthenticationsService();
+      const authenticationsService = new PostgresAuthenticationsService(prisma);
       const token = 'token';
 
       // Action
@@ -32,7 +33,7 @@ describe('AuthenticationsService', () => {
   describe('verifyRefreshToken function', () => {
     it('should throw InvariantError if token not available', async () => {
       // Arrange
-      const authenticationsService = new AuthenticationsService();
+      const authenticationsService = new PostgresAuthenticationsService(prisma);
       const token = 'token';
 
       // Action & Assert
@@ -42,7 +43,7 @@ describe('AuthenticationsService', () => {
 
     it('should not throw InvariantError if token available', async () => {
       // Arrange
-      const authenticationsService = new AuthenticationsService();
+      const authenticationsService = new PostgresAuthenticationsService(prisma);
       const token = 'token';
       await AuthenticationsTableTestHelper.addToken(token);
 
@@ -55,7 +56,7 @@ describe('AuthenticationsService', () => {
   describe('deleteRefreshToken', () => {
     it('should delete token from database', async () => {
       // Arrange
-      const authenticationsService = new AuthenticationsService();
+      const authenticationsService = new PostgresAuthenticationsService(prisma);
       const token = 'token';
       await AuthenticationsTableTestHelper.addToken(token);
 

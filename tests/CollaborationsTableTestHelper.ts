@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-const pool = require('../src/services/postgres/pool');
+import pool from '../src/services/postgres/pool';
 
 const CollaborationsTableTestHelper = {
   async addCollaboration({
@@ -15,7 +15,7 @@ const CollaborationsTableTestHelper = {
     await pool.query(query);
   },
 
-  async findCollaborationsById(id) {
+  async findCollaborationsById(id: string) {
     const query = {
       text: 'SELECT * FROM collaborations WHERE id = $1',
       values: [id],
@@ -25,7 +25,7 @@ const CollaborationsTableTestHelper = {
     return result.rows;
   },
 
-  async findCollaborationsByUserId(userId) {
+  async findCollaborationsByUserId(userId: string) {
     const query = {
       text: 'SELECT * FROM collaborations WHERE user_id = $1',
       values: [userId],
@@ -35,7 +35,7 @@ const CollaborationsTableTestHelper = {
     return result.rows;
   },
 
-  async findCollaborationsByPlaylistId(playlistId) {
+  async findCollaborationsByPlaylistId(playlistId: string) {
     const query = {
       text: 'SELECT * FROM collaborations WHERE playlist_id = $1',
       values: [playlistId],
@@ -50,4 +50,4 @@ const CollaborationsTableTestHelper = {
   },
 };
 
-module.exports = CollaborationsTableTestHelper;
+export default CollaborationsTableTestHelper;

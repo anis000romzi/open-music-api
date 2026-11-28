@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-const pool = require('../src/services/postgres/pool');
+import pool from '../src/services/postgres/pool';
 
 const SongsTableTestHelper = {
   async addSong({
@@ -25,7 +25,7 @@ const SongsTableTestHelper = {
     await pool.query(query);
   },
 
-  async findSongsById(id) {
+  async findSongsById(id: string) {
     const query = {
       text: 'SELECT * FROM songs WHERE id = $1',
       values: [id],
@@ -35,7 +35,7 @@ const SongsTableTestHelper = {
     return result.rows;
   },
 
-  async findSongsByTitle(title) {
+  async findSongsByTitle(title: string) {
     const query = {
       text: 'SELECT * FROM songs WHERE title = $1',
       values: [title],
@@ -50,4 +50,4 @@ const SongsTableTestHelper = {
   },
 };
 
-module.exports = SongsTableTestHelper;
+export default SongsTableTestHelper;

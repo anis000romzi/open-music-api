@@ -1,8 +1,8 @@
 /* istanbul ignore file */
-const pool = require('../src/services/postgres/pool');
+import pool from '../src/services/postgres/pool';
 
 const AuthenticationsTableTestHelper = {
-  async addToken(token) {
+  async addToken(token: string) {
     const query = {
       text: 'INSERT INTO authentications VALUES($1)',
       values: [token],
@@ -11,7 +11,7 @@ const AuthenticationsTableTestHelper = {
     await pool.query(query);
   },
 
-  async findToken(token) {
+  async findToken(token: string) {
     const query = {
       text: 'SELECT token FROM authentications WHERE token = $1',
       values: [token],
@@ -26,4 +26,4 @@ const AuthenticationsTableTestHelper = {
   },
 };
 
-module.exports = AuthenticationsTableTestHelper;
+export default AuthenticationsTableTestHelper;

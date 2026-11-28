@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-const pool = require('../src/services/postgres/pool');
+import pool from '../src/services/postgres/pool';
 
 const GenresTableTestHelper = {
   async addGenre({
@@ -14,7 +14,7 @@ const GenresTableTestHelper = {
     await pool.query(query);
   },
 
-  async findGenresById(id) {
+  async findGenresById(id: string) {
     const query = {
       text: 'SELECT * FROM genres WHERE id = $1',
       values: [id],
@@ -24,7 +24,7 @@ const GenresTableTestHelper = {
     return result.rows;
   },
 
-  async findGenresByName(name) {
+  async findGenresByName(name: string) {
     const query = {
       text: 'SELECT * FROM genres WHERE name = $1',
       values: [name],
@@ -39,4 +39,4 @@ const GenresTableTestHelper = {
   },
 };
 
-module.exports = GenresTableTestHelper;
+export default GenresTableTestHelper;

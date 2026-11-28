@@ -1,13 +1,21 @@
-/* eslint-disable no-undef */
-const PlaylistsTableTestHelper = require('../../../../tests/PlaylistsTableTestHelper');
-const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
-const InvariantError = require('../../../exceptions/InvariantError');
-const NotFoundError = require('../../../exceptions/NotFoundError');
-const AuthorizationError = require('../../../exceptions/AuthorizationError');
-const pool = require('../pool');
-const PlaylistsService = require('../PlaylistsService');
+import PlaylistsTableTestHelper from '../../../../tests/PlaylistsTableTestHelper';
+import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper';
+import { createMockCacheService } from '../../../../tests/mockCacheService';
+import { InvariantError } from '../../../exceptions/InvariantError';
+import { NotFoundError } from '../../../exceptions/NotFoundError';
+import { AuthorizationError } from '../../../exceptions/AuthorizationError';
+import prisma from '../../../helpers/prisma';
+import pool from '../pool';
+import { PostgresCollaborationsService } from '../PostgresCollaborationsService';
+import { PostgresPlaylistsService } from '../PostgresPlaylistsService';
 
-describe('PlaylistsService', () => {
+const createService = () => new PostgresPlaylistsService(
+  prisma,
+  new PostgresCollaborationsService(prisma),
+  createMockCacheService(),
+);
+
+describe('PostgresPlaylistsService', () => {
   afterEach(async () => {
     await PlaylistsTableTestHelper.cleanTable();
     await UsersTableTestHelper.cleanTable();
@@ -15,22 +23,24 @@ describe('PlaylistsService', () => {
 
   afterAll(async () => {
     await pool.end();
+    await prisma.$disconnect();
   });
 
   describe('addPlaylist function', () => {
     it('should throw InvariantError when the required input is not complete', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
-      await expect(playlistsService.addPlaylist({ name: 'Playlist Testing', isPublic: false })).rejects.toThrowError(InvariantError);
+      // @ts-expect-error: owner is intentionally missing
+      await expect(playlistsService.addPlaylist({ name: 'Playlist Testing', isPublic: false })).rejects.toThrow(InvariantError);
     });
 
     it('should persist after adding a playlist', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action
       await playlistsService.addPlaylist({ name: 'Playlist Testing', owner: 'user-123', isPublic: false });
@@ -46,19 +56,19 @@ describe('PlaylistsService', () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
       return expect(playlistsService.getPlaylistById('playlist-456'))
         .rejects
-        .toThrowError(NotFoundError);
+        .toThrow(NotFoundError);
     });
 
     it('should return correct data when playlist id found', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action
       const playlist = await playlistsService.getPlaylistById('playlist-123');
@@ -83,33 +93,33 @@ describe('PlaylistsService', () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
       return expect(playlistsService.verifyPlaylistAccess('playlist-456', 'user-123'))
         .rejects
-        .toThrowError(NotFoundError);
+        .toThrow(NotFoundError);
     });
 
     it('should throw AuthorizationError when playlist owner and user id not match', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
-      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-456')).rejects.toThrowError(AuthorizationError);
+      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-456')).rejects.toThrow(AuthorizationError);
     });
 
     it('should not throw any error when playlist id found and user id match', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
-      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-123')).resolves.not.toThrowError(NotFoundError);
-      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-123')).resolves.not.toThrowError(AuthorizationError);
+      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-123')).resolves.not.toThrow(NotFoundError);
+      await expect(playlistsService.verifyPlaylistAccess('playlist-123', 'user-123')).resolves.not.toThrow(AuthorizationError);
     });
   });
 
@@ -118,22 +128,23 @@ describe('PlaylistsService', () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
       // Action & Assert
-      await expect(playlistsService.editPlaylistById({ id: 'playlist-456', name: 'Playlist edit', isPublic: false })).rejects.toThrowError(NotFoundError);
+      await expect(playlistsService.editPlaylistById({ id: 'playlist-456', name: 'Playlist edit', isPublic: false })).rejects.toThrow(NotFoundError);
     });
 
     it('should update the correct playlist', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const playlistsService = new PlaylistsService({});
+      const playlistsService = createService();
 
+      // Action
       await playlistsService.editPlaylistById({ id: 'playlist-123', name: 'Playlist edit', isPublic: true });
       const updatedPlaylist = await PlaylistsTableTestHelper.findPlaylistsById('playlist-123');
 
-      // Action & Assert
+      // Assert
       expect(updatedPlaylist[0].name).toStrictEqual('Playlist edit');
       expect(updatedPlaylist[0].is_public).toStrictEqual(true);
     });

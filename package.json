@@ -7,7 +7,7 @@
     "start": "node ./dist/server.js",
     "start:dev": "ts-node-dev --respawn ./src/server.ts",
     "lint": "eslint ./",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "db:create": "ts-node ./db/create.ts",
     "db:seed": "ts-node ./db/seed.ts",
     "migrate": "node-pg-migrate",

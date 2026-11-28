@@ -1,12 +1,12 @@
-/* eslint-disable no-undef */
-const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
-const PlaylistsTableTestHelper = require('../../../../tests/PlaylistsTableTestHelper');
-const CollaborationsTableTestHelper = require('../../../../tests/CollaborationsTableTestHelper');
-const InvariantError = require('../../../exceptions/InvariantError');
-const pool = require('../pool');
-const CollaborationsService = require('../CollaborationsService');
+import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper';
+import PlaylistsTableTestHelper from '../../../../tests/PlaylistsTableTestHelper';
+import CollaborationsTableTestHelper from '../../../../tests/CollaborationsTableTestHelper';
+import { InvariantError } from '../../../exceptions/InvariantError';
+import prisma from '../../../helpers/prisma';
+import pool from '../pool';
+import { PostgresCollaborationsService } from '../PostgresCollaborationsService';
 
-describe('CollaborationsService', () => {
+describe('PostgresCollaborationsService', () => {
   afterEach(async () => {
     await UsersTableTestHelper.cleanTable();
     await PlaylistsTableTestHelper.cleanTable();
@@ -15,6 +15,7 @@ describe('CollaborationsService', () => {
 
   afterAll(async () => {
     await pool.end();
+    await prisma.$disconnect();
   });
 
   describe('addCollaboration function', () => {
@@ -23,10 +24,11 @@ describe('CollaborationsService', () => {
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action & Assert
-      await expect(collaborationsService.addCollaboration('playlist-123')).rejects.toThrowError(InvariantError);
+      // @ts-expect-error: userId is intentionally missing
+      await expect(collaborationsService.addCollaboration('playlist-123')).rejects.toThrow(InvariantError);
     });
 
     it('should persist after adding a collaboration', async () => {
@@ -34,7 +36,7 @@ describe('CollaborationsService', () => {
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action
       await collaborationsService.addCollaboration('playlist-123', 'user-456');
@@ -54,11 +56,11 @@ describe('CollaborationsService', () => {
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
       await CollaborationsTableTestHelper.addCollaboration({ playlistId: 'playlist-123', userId: 'user-456' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action & Assert
-      await expect(collaborationsService.deleteCollaboration('playlist-123', 'user-789')).rejects.toThrowError(InvariantError);
-      await expect(collaborationsService.deleteCollaboration('playlist-456', 'user-456')).rejects.toThrowError(InvariantError);
+      await expect(collaborationsService.deleteCollaboration('playlist-123', 'user-789')).rejects.toThrow(InvariantError);
+      await expect(collaborationsService.deleteCollaboration('playlist-456', 'user-456')).rejects.toThrow(InvariantError);
     });
 
     it('should delete the correct collaboration', async () => {
@@ -67,7 +69,7 @@ describe('CollaborationsService', () => {
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
       await CollaborationsTableTestHelper.addCollaboration({ playlistId: 'playlist-123', userId: 'user-456' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action
       await collaborationsService.deleteCollaboration('playlist-123', 'user-456');
@@ -85,23 +87,23 @@ describe('CollaborationsService', () => {
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
       await CollaborationsTableTestHelper.addCollaboration({ playlistId: 'playlist-123', userId: 'user-456' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action & Assert
-      await expect(collaborationsService.verifyCollaborator('playlist-123', 'user-789')).rejects.toThrowError(InvariantError);
-      await expect(collaborationsService.verifyCollaborator('playlist-456', 'user-456')).rejects.toThrowError(InvariantError);
+      await expect(collaborationsService.verifyCollaborator('playlist-123', 'user-789')).rejects.toThrow(InvariantError);
+      await expect(collaborationsService.verifyCollaborator('playlist-456', 'user-456')).rejects.toThrow(InvariantError);
     });
 
-    it('should throw InvariantError when playlist id or user id not found', async () => {
+    it('should not throw InvariantError when playlist id and user id found', async () => {
       // Arrange
       await UsersTableTestHelper.addUser({ id: 'user-123' });
       await UsersTableTestHelper.addUser({ id: 'user-456', email: 'testing2@gmail.com', username: 'testing2' });
       await PlaylistsTableTestHelper.addPlaylist({ id: 'playlist-123' });
       await CollaborationsTableTestHelper.addCollaboration({ playlistId: 'playlist-123', userId: 'user-456' });
-      const collaborationsService = new CollaborationsService();
+      const collaborationsService = new PostgresCollaborationsService(prisma);
 
       // Action & Assert
-      await expect(collaborationsService.verifyCollaborator('playlist-123', 'user-456')).resolves.not.toThrowError(InvariantError);
+      await expect(collaborationsService.verifyCollaborator('playlist-123', 'user-456')).resolves.not.toThrow(InvariantError);
     });
   });
 });

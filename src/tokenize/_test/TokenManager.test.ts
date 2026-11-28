@@ -1,14 +1,13 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-undef */
-const TokenManager = require('../TokenManager');
-const InvariantError = require('../../exceptions/InvariantError');
+import Jwt from '@hapi/jwt';
+import { TokenManager } from '../TokenManager';
+import { InvariantError } from '../../exceptions/InvariantError';
 
 // Mocking the Jwt module
 jest.mock('@hapi/jwt', () => ({
   token: {
-    generate: jest.fn((payload, key) => `fake-token-${key}`),
-    decode: jest.fn((token) => ({ decoded: { payload: { data: 'fake-data' } } })),
-    verifySignature: jest.fn(),
+    generate: jest.fn((_payload: unknown, key: string) => `fake-token-${key}`),
+    decode: jest.fn(() => ({ decoded: { payload: { id: 'user-123' } } })),
+    verify: jest.fn(),
   },
 }));
 
@@ -19,7 +18,7 @@ process.env.REFRESH_TOKEN_KEY = 'fake-refresh-token-key';
 describe('TokenManager', () => {
   describe('generateAccessToken', () => {
     it('should generate an access token', () => {
-      const payload = { userId: 123 };
+      const payload = { id: 'user-123' };
       const accessToken = TokenManager.generateAccessToken(payload);
       expect(accessToken).toBe('fake-token-fake-access-token-key');
     });
@@ -27,7 +26,7 @@ describe('TokenManager', () => {
 
   describe('generateRefreshToken', () => {
     it('should generate a refresh token', () => {
-      const payload = { userId: 123 };
+      const payload = { id: 'user-123' };
       const refreshToken = TokenManager.generateRefreshToken(payload);
       expect(refreshToken).toBe('fake-token-fake-refresh-token-key');
     });
@@ -37,12 +36,12 @@ describe('TokenManager', () => {
     it('should verify and return payload for a valid refresh token', () => {
       const refreshToken = 'fake-refresh-token';
       const decodedPayload = TokenManager.verifyRefreshToken(refreshToken);
-      expect(decodedPayload).toEqual({ data: 'fake-data' });
+      expect(decodedPayload).toEqual({ id: 'user-123' });
     });
 
     it('should throw InvariantError for an invalid refresh token', () => {
       // Mocking the Jwt module to simulate an error
-      jest.spyOn(jest.requireMock('@hapi/jwt').token, 'decode').mockImplementation(() => {
+      jest.mocked(Jwt.token.decode).mockImplementationOnce(() => {
         throw new Error('Fake error');
       });
 
